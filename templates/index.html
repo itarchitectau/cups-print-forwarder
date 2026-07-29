@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Print Forwarder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.10);
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 480px;
+    }
+    h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #1a1a2e; }
+    label { display: block; font-size: .85rem; font-weight: 600; color: #444; margin-bottom: .3rem; }
+    input, select {
+      width: 100%; padding: .55rem .75rem;
+      border: 1px solid #d1d5db; border-radius: 6px;
+      font-size: .95rem; background: #fafafa;
+      transition: border-color .15s;
+    }
+    input:focus, select:focus { outline: none; border-color: #4f46e5; background: #fff; }
+    .field { margin-bottom: 1.1rem; }
+    .drop-zone {
+      border: 2px dashed #c7cfe2;
+      border-radius: 8px;
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      color: #6b7280;
+      transition: border-color .15s, background .15s;
+      margin-bottom: 1.1rem;
+    }
+    .drop-zone.drag-over { border-color: #4f46e5; background: #eef2ff; }
+    .drop-zone input[type=file] { display: none; }
+    .drop-zone .icon { font-size: 2rem; margin-bottom: .5rem; }
+    .drop-zone .hint { font-size: .8rem; margin-top: .25rem; color: #9ca3af; }
+    .file-name {
+      font-size: .85rem; color: #374151; margin-top: .5rem;
+      word-break: break-all;
+    }
+    .row { display: flex; gap: .75rem; }
+    .row .field { flex: 1; }
+    button[type=submit] {
+      width: 100%; padding: .7rem;
+      background: #4f46e5; color: #fff;
+      border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background .15s;
+    }
+    button[type=submit]:hover { background: #4338ca; }
+    button[type=submit]:disabled { background: #a5b4fc; cursor: not-allowed; }
+    #status {
+      margin-top: 1rem; padding: .75rem 1rem;
+      border-radius: 6px; font-size: .9rem;
+      display: none;
+    }
+    #status.ok  { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+    #status.err { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+    .spinner { display: inline-block; width: 1em; height: 1em;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>&#128438; Print Forwarder</h1>
+
+  <form id="printForm">
+    <div class="drop-zone" id="dropZone">
+      <div class="icon">&#128196;</div>
+      <div>Drop file here or <strong>click to browse</strong></div>
+      <div class="hint">PDF, DOCX, TIFF &middot; max 50 MB</div>
+      <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.tiff,.tif" required />
+      <div class="file-name" id="fileName"></div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label for="printer">Printer</label>
+        <select id="printer" name="printer">
+          <option value="">Loading&hellip;</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:90px">
+        <label for="copies">Copies</label>
+        <input type="number" id="copies" name="copies" value="1" min="1" max="99" />
+      </div>
+    </div>
+
+    <button type="submit" id="submitBtn">Send to Printer</button>
+  </form>
+
+  <div id="status"></div>
+</div>
+
+<script>
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileName  = document.getElementById('fileName');
+const form      = document.getElementById('printForm');
+const submitBtn = document.getElementById('submitBtn');
+const status    = document.getElementById('status');
+const printerSel = document.getElementById('printer');
+
+// Load printers
+fetch('/printers').then(r => r.json()).then(data => {
+  if (data.error) { printerSel.innerHTML = '<option value="">Default</option>'; return; }
+  printerSel.innerHTML = data.printers.map(p =>
+    `<option value="${p}"${p === data.default ? ' selected' : ''}>${p}${p === data.default ? ' (default)' : ''}</option>`
+  ).join('');
+  if (!data.printers.length) printerSel.innerHTML = '<option value="">Default</option>';
+}).catch(() => { printerSel.innerHTML = '<option value="">Default</option>'; });
+
+// Drop zone wiring
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files.length) {
+    fileInput.files = e.dataTransfer.files;
+    fileName.textContent = e.dataTransfer.files[0].name;
+  }
+});
+fileInput.addEventListener('change', () => {
+  fileName.textContent = fileInput.files[0]?.name || '';
+});
+
+function showStatus(msg, ok) {
+  status.textContent = msg;
+  status.className = ok ? 'ok' : 'err';
+  status.style.display = 'block';
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!fileInput.files.length) { showStatus('Please select a file.', false); return; }
+
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner"></span> Sending&hellip;';
+  status.style.display = 'none';
+
+  const fd = new FormData(form);
+  try {
+    const res = await fetch('/print', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      showStatus(`Job #${data.job_id} queued on "${data.printer}".`, true);
+      form.reset();
+      fileName.textContent = '';
+    } else {
+      showStatus(data.error || 'Unknown error.', false);
+    }
+  } catch (err) {
+    showStatus('Network error: ' + err.message, false);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send to Printer';
+  }
+});
+</script>
+</body>
+</html>
