@@ -10,6 +10,8 @@ A lightweight web application that lets users upload documents (PDF, DOCX, TIFF)
 - DOCX-to-PDF conversion via LibreOffice (headless)
 - Printer selection and copy count from the UI
 - Uploaded files are deleted from disk immediately after queuing
+- **Print Queue tab** — view active/completed jobs; cancel or release held jobs
+- **Services tab** — restart the `cups-browsed` network printer discovery service
 
 ## Requirements
 
@@ -42,6 +44,7 @@ All settings live in [`config.py`](config.py) and can be overridden with environ
 | `CUPS_PORT` | `631` | CUPS server port |
 | `CUPS_PRINTER` | *(empty)* | Printer name to use; empty = CUPS default |
 | `LIBREOFFICE_BIN` | `soffice` | LibreOffice binary name or full path |
+| `RESTART_CUPS_BROWSED_CMD` | `systemctl restart cups-browsed` | Shell command (space-split) used by the Services tab to restart cups-browsed |
 
 ### Changing credentials
 
@@ -206,6 +209,15 @@ cups-print-forwarder/
 ```
 
 ## Troubleshooting
+
+**Restarting cups-browsed in a container**
+The Services tab runs `RESTART_CUPS_BROWSED_CMD` inside the container. To reach the host's systemd, set `pid: host` and `privileged: true` in `docker-compose.yml` (commented out by default), then set:
+```
+RESTART_CUPS_BROWSED_CMD=nsenter -t 1 -m -u -i -n -- systemctl restart cups-browsed
+```
+
+**Service restart returns "Command not found: systemctl"**
+The host is not using systemd. Try `service cups-browsed restart` or set `RESTART_CUPS_BROWSED_CMD` to the correct init command for your distro.
 
 **"No default CUPS printer configured"**
 Set `CUPS_PRINTER` in your environment or `config.py`, or configure a default printer in CUPS (`lpadmin -d <printer-name>`).

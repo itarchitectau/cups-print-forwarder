@@ -1,6 +1,5 @@
 import os
 import subprocess
-import tempfile
 import uuid
 
 import cups
@@ -30,34 +29,30 @@ def allowed_file(filename: str) -> bool:
     return ext in config.ALLOWED_EXTENSIONS
 
 
+def cups_conn():
+    return cups.Connection(host=config.CUPS_HOST, port=config.CUPS_PORT)
+
+
 def docx_to_pdf(docx_path: str) -> str:
-    """Convert DOCX to PDF using LibreOffice; returns path to generated PDF."""
     out_dir = os.path.dirname(docx_path)
     subprocess.run(
-        [
-            config.LIBREOFFICE_BIN,
-            "--headless",
-            "--convert-to", "pdf",
-            "--outdir", out_dir,
-            docx_path,
-        ],
-        check=True,
-        timeout=60,
+        [config.LIBREOFFICE_BIN, "--headless", "--convert-to", "pdf",
+         "--outdir", out_dir, docx_path],
+        check=True, timeout=60,
     )
     base = os.path.splitext(os.path.basename(docx_path))[0]
     return os.path.join(out_dir, base + ".pdf")
 
 
-def send_to_cups(file_path: str, job_title: str, copies: int = 1) -> int:
-    """Submit file to CUPS and return job id."""
-    conn = cups.Connection(host=config.CUPS_HOST, port=config.CUPS_PORT)
-    printer = config.CUPS_PRINTER or conn.getDefault()
+def send_to_cups(file_path: str, job_title: str, printer: str, copies: int = 1) -> int:
+    conn = cups_conn()
+    printer = printer or conn.getDefault()
     if not printer:
         raise RuntimeError("No default CUPS printer configured.")
-    options = {"copies": str(copies)}
-    job_id = conn.printFile(printer, file_path, job_title, options)
-    return job_id
+    return conn.printFile(printer, file_path, job_title, {"copies": str(copies)})
 
+
+# ── Pages ──────────────────────────────────────────────────────────────────────
 
 @app.route("/")
 @auth.login_required
@@ -65,17 +60,21 @@ def index():
     return render_template("index.html")
 
 
+# ── Printers ───────────────────────────────────────────────────────────────────
+
 @app.route("/printers")
 @auth.login_required
 def list_printers():
     try:
-        conn = cups.Connection(host=config.CUPS_HOST, port=config.CUPS_PORT)
+        conn = cups_conn()
         printers = list(conn.getPrinters().keys())
         default = conn.getDefault()
     except Exception as exc:
         return jsonify({"error": str(exc)}), 503
     return jsonify({"printers": printers, "default": default})
 
+
+# ── Print ──────────────────────────────────────────────────────────────────────
 
 @app.route("/print", methods=["POST"])
 @auth.login_required
@@ -93,25 +92,15 @@ def print_file():
     printer_name = request.form.get("printer", "").strip() or config.CUPS_PRINTER
 
     safe_name = secure_filename(f.filename)
-    unique_name = f"{uuid.uuid4().hex}_{safe_name}"
-    save_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_name)
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{safe_name}")
     f.save(save_path)
 
+    print_path = save_path
     try:
-        ext = safe_name.rsplit(".", 1)[-1].lower()
-        print_path = save_path
-
-        if ext == "docx":
+        if safe_name.rsplit(".", 1)[-1].lower() == "docx":
             print_path = docx_to_pdf(save_path)
-
-        # Temporarily override printer if caller specified one
-        orig_printer = config.CUPS_PRINTER
-        if printer_name:
-            config.CUPS_PRINTER = printer_name
-
-        job_id = send_to_cups(print_path, job_title=safe_name, copies=copies)
-        config.CUPS_PRINTER = orig_printer
-
+        job_id = send_to_cups(print_path, job_title=safe_name,
+                              printer=printer_name, copies=copies)
     except subprocess.CalledProcessError:
         return jsonify({"error": "DOCX conversion failed. Is LibreOffice installed?"}), 500
     except RuntimeError as exc:
@@ -119,8 +108,7 @@ def print_file():
     except Exception as exc:
         return jsonify({"error": f"Print error: {exc}"}), 500
     finally:
-        # Clean up uploaded file (and converted PDF if different)
-        for p in {save_path, print_path if "print_path" in dir() else save_path}:
+        for p in {save_path, print_path}:
             try:
                 os.remove(p)
             except OSError:
@@ -128,6 +116,85 @@ def print_file():
 
     return jsonify({"success": True, "job_id": job_id, "printer": printer_name or "default"})
 
+
+# ── Job queue ──────────────────────────────────────────────────────────────────
+
+_JOB_STATE_LABELS = {
+    3: "Pending", 4: "Held",      5: "Processing",
+    6: "Stopped", 7: "Canceled",  8: "Aborted",   9: "Completed",
+}
+
+
+@app.route("/jobs")
+@auth.login_required
+def list_jobs():
+    which = request.args.get("which", "not-completed")
+    if which not in ("not-completed", "completed", "all"):
+        which = "not-completed"
+    try:
+        conn = cups_conn()
+        raw = conn.getJobs(which_jobs=which, my_jobs=False)
+        jobs = [
+            {
+                "id":          jid,
+                "name":        attrs.get("job-name", "—"),
+                "state":       attrs.get("job-state", 0),
+                "state_label": _JOB_STATE_LABELS.get(attrs.get("job-state", 0), "Unknown"),
+                "printer":     attrs.get("job-printer-uri", "").rstrip("/").split("/")[-1],
+                "user":        attrs.get("job-originating-user-name", "—"),
+                "size_kb":     attrs.get("job-k-octets", 0),
+                "created":     attrs.get("time-at-creation", 0),
+            }
+            for jid, attrs in raw.items()
+        ]
+        jobs.sort(key=lambda j: j["created"], reverse=True)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 503
+    return jsonify({"jobs": jobs})
+
+
+@app.route("/jobs/<int:job_id>/cancel", methods=["POST"])
+@auth.login_required
+def cancel_job(job_id):
+    try:
+        cups_conn().cancelJob(job_id)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"success": True})
+
+
+@app.route("/jobs/<int:job_id>/release", methods=["POST"])
+@auth.login_required
+def release_job(job_id):
+    try:
+        cups_conn().releaseJob(job_id)
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"success": True})
+
+
+# ── Services ───────────────────────────────────────────────────────────────────
+
+@app.route("/service/cups-browsed/restart", methods=["POST"])
+@auth.login_required
+def restart_cups_browsed():
+    cmd = config.RESTART_CUPS_BROWSED_CMD.split()
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            return jsonify(
+                {"error": result.stderr.strip() or f"Command exited {result.returncode}"}
+            ), 500
+    except FileNotFoundError:
+        return jsonify({"error": f"Command not found: {cmd[0]}"}), 500
+    except subprocess.TimeoutExpired:
+        return jsonify({"error": "Restart timed out after 30 s"}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+    return jsonify({"success": True})
+
+
+# ── Error handlers ─────────────────────────────────────────────────────────────
 
 @app.errorhandler(413)
 def too_large(_):

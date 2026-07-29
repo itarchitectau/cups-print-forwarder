@@ -18,7 +18,14 @@ services:
       - CUPS_PRINTER=${CUPS_PRINTER:-}
       # LibreOffice
       - LIBREOFFICE_BIN=soffice
+      # Service restart — override for Docker (requires --pid=host + privileged):
+      #   nsenter -t 1 -m -u -i -n -- systemctl restart cups-browsed
+      - RESTART_CUPS_BROWSED_CMD=${RESTART_CUPS_BROWSED_CMD:-systemctl restart cups-browsed}
     # Allows "host.docker.internal" to resolve on Linux Docker hosts.
     # On Docker Desktop (Mac/Windows) this is handled automatically.
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Uncomment the two lines below to allow the Services tab to restart
+    # cups-browsed on the host via nsenter (set RESTART_CUPS_BROWSED_CMD above).
+    #pid: host
+    #privileged: true

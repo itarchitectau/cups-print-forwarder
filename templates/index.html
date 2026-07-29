@@ -6,172 +6,460 @@
   <title>Print Forwarder</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, sans-serif;
-      background: #f4f6f9;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    :root {
+      --bg: #f4f6f9;
+      --surface: #fff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --primary: #4f46e5;
+      --primary-h: #4338ca;
+      --danger: #dc2626;
+      --danger-h: #b91c1c;
+      --success: #059669;
+      --warning: #d97706;
+      --warning-h: #b45309;
+      --shadow: 0 1px 3px rgba(0,0,0,.10);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,.10), 0 2px 4px -1px rgba(0,0,0,.06);
     }
-    .card {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 24px rgba(0,0,0,.10);
-      padding: 2.5rem 2rem;
-      width: 100%;
-      max-width: 480px;
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* ── Header ── */
+    .hdr { background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); position: sticky; top: 0; z-index: 20; }
+    .hdr-inner { max-width: 980px; margin: 0 auto; padding: .7rem 1.5rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+    .app-title { font-size: 1.15rem; font-weight: 700; white-space: nowrap; }
+    .tabs { display: flex; gap: .2rem; }
+    .tab-btn {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .4rem .85rem; border: none; background: transparent;
+      border-radius: 6px; font-size: .88rem; font-weight: 500;
+      color: var(--muted); cursor: pointer; transition: background .15s, color .15s;
     }
-    h1 { font-size: 1.4rem; margin-bottom: 1.5rem; color: #1a1a2e; }
-    label { display: block; font-size: .85rem; font-weight: 600; color: #444; margin-bottom: .3rem; }
-    input, select {
+    .tab-btn:hover { background: var(--bg); color: var(--text); }
+    .tab-btn.active { background: #ede9fe; color: var(--primary); }
+    .pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 1.25em; height: 1.25em; padding: 0 .3em;
+      background: var(--primary); color: #fff;
+      border-radius: 9999px; font-size: .68rem; font-weight: 700;
+    }
+
+    /* ── Layout ── */
+    .main { max-width: 980px; margin: 2rem auto; padding: 0 1.5rem; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .card { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-md); padding: 2rem; }
+
+    /* ── Forms ── */
+    .lbl { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
+    .fld { margin-bottom: 1rem; }
+    .inp, .sel {
       width: 100%; padding: .55rem .75rem;
-      border: 1px solid #d1d5db; border-radius: 6px;
-      font-size: .95rem; background: #fafafa;
-      transition: border-color .15s;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: .93rem; background: #fafafa; transition: border-color .15s;
     }
-    input:focus, select:focus { outline: none; border-color: #4f46e5; background: #fff; }
-    .field { margin-bottom: 1.1rem; }
-    .drop-zone {
-      border: 2px dashed #c7cfe2;
-      border-radius: 8px;
-      padding: 2rem 1rem;
-      text-align: center;
-      cursor: pointer;
-      color: #6b7280;
-      transition: border-color .15s, background .15s;
-      margin-bottom: 1.1rem;
-    }
-    .drop-zone.drag-over { border-color: #4f46e5; background: #eef2ff; }
-    .drop-zone input[type=file] { display: none; }
-    .drop-zone .icon { font-size: 2rem; margin-bottom: .5rem; }
-    .drop-zone .hint { font-size: .8rem; margin-top: .25rem; color: #9ca3af; }
-    .file-name {
-      font-size: .85rem; color: #374151; margin-top: .5rem;
-      word-break: break-all;
-    }
+    .inp:focus, .sel:focus { outline: none; border-color: var(--primary); background: #fff; }
     .row { display: flex; gap: .75rem; }
-    .row .field { flex: 1; }
-    button[type=submit] {
-      width: 100%; padding: .7rem;
-      background: #4f46e5; color: #fff;
-      border: none; border-radius: 8px;
-      font-size: 1rem; font-weight: 600;
-      cursor: pointer; transition: background .15s;
+    .row .fld { flex: 1; }
+
+    .drop {
+      border: 2px dashed #c7cfe2; border-radius: 8px; padding: 2.5rem 1rem;
+      text-align: center; cursor: pointer; color: var(--muted);
+      transition: border-color .15s, background .15s; margin-bottom: 1rem;
     }
-    button[type=submit]:hover { background: #4338ca; }
-    button[type=submit]:disabled { background: #a5b4fc; cursor: not-allowed; }
-    #status {
-      margin-top: 1rem; padding: .75rem 1rem;
-      border-radius: 6px; font-size: .9rem;
-      display: none;
+    .drop.over { border-color: var(--primary); background: #eef2ff; }
+    .drop input[type=file] { display: none; }
+    .drop-icon { font-size: 2.5rem; margin-bottom: .4rem; }
+    .drop-hint { font-size: .78rem; margin-top: .3rem; color: #9ca3af; }
+    .file-name { font-size: .84rem; font-weight: 500; color: var(--text); margin-top: .5rem; word-break: break-all; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+      padding: .55rem 1.1rem; border: none; border-radius: 7px;
+      font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .15s, opacity .15s;
     }
-    #status.ok  { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
-    #status.err { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
-    .spinner { display: inline-block; width: 1em; height: 1em;
-      border: 2px solid #fff; border-top-color: transparent;
-      border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-primary  { background: var(--primary); color: #fff; }
+    .btn-primary:not(:disabled):hover  { background: var(--primary-h); }
+    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-danger:not(:disabled):hover   { background: var(--danger-h); }
+    .btn-success  { background: var(--success); color: #fff; }
+    .btn-success:not(:disabled):hover  { background: #047857; }
+    .btn-warning  { background: var(--warning); color: #fff; }
+    .btn-warning:not(:disabled):hover  { background: var(--warning-h); }
+    .btn-ghost    { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:not(:disabled):hover    { background: var(--border); }
+    .btn-sm  { padding: .3rem .7rem; font-size: .82rem; border-radius: 5px; }
+    .btn-full { width: 100%; }
+
+    /* ── Status messages ── */
+    .msg { padding: .65rem .9rem; border-radius: 6px; font-size: .88rem; margin-top: .75rem; }
+    .msg.ok  { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
+    .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* ── Spinner ── */
+    .spin { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: rot .6s linear infinite; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* ── Queue toolbar ── */
+    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem; }
+    .toolbar-l { display: flex; gap: .5rem; align-items: center; }
+    .chk-label { display: flex; align-items: center; gap: .35rem; font-size: .83rem; cursor: pointer; user-select: none; }
+
+    /* ── Table ── */
+    .tbl-wrap { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    .tbl thead { background: #f9fafb; }
+    .tbl th {
+      padding: .7rem 1rem; text-align: left;
+      font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--border);
+    }
+    .tbl td { padding: .65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .tbl tbody tr:last-child td { border-bottom: none; }
+    .tbl tbody tr:hover { background: #f9fafb; }
+    .tbl .col-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tbl .col-act { white-space: nowrap; }
+
+    /* ── State badges ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: .3em;
+      padding: .18em .55em; border-radius: 9999px;
+      font-size: .76rem; font-weight: 600; white-space: nowrap;
+    }
+    .badge::before { content: '●'; font-size: .55em; }
+    .s3 { background: #fef3c7; color: #92400e; }
+    .s4 { background: #ede9fe; color: #5b21b6; }
+    .s5 { background: #dbeafe; color: #1e40af; }
+    .s6 { background: #ffedd5; color: #9a3412; }
+    .s7 { background: #f3f4f6; color: var(--muted); }
+    .s8 { background: #fee2e2; color: #991b1b; }
+    .s9 { background: #d1fae5; color: #065f46; }
+
+    /* ── Row actions / confirm ── */
+    .act { display: flex; gap: .35rem; align-items: center; }
+    .confirm-row { display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; }
+    .confirm-row .lbl-q { font-size: .8rem; color: var(--muted); }
+
+    /* ── Empty state ── */
+    .empty { padding: 3rem 1rem; text-align: center; color: var(--muted); font-size: .9rem; }
+
+    /* ── Services ── */
+    .svc-row { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; }
+    .svc-info { flex: 1; min-width: 200px; }
+    .svc-info h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: .4rem; }
+    .svc-info p  { font-size: .88rem; color: var(--muted); line-height: 1.55; }
+    .svc-ctrl { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; min-width: 180px; }
+    .confirm-box {
+      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
+      padding: .75rem 1rem; font-size: .86rem;
+    }
+    .confirm-box p { color: #7c2d12; margin-bottom: .6rem; line-height: 1.4; }
+    .confirm-box .btn-row { display: flex; gap: .4rem; }
   </style>
 </head>
 <body>
-<div class="card">
-  <h1>&#128438; Print Forwarder</h1>
 
-  <form id="printForm">
-    <div class="drop-zone" id="dropZone">
-      <div class="icon">&#128196;</div>
-      <div>Drop file here or <strong>click to browse</strong></div>
-      <div class="hint">PDF, DOCX, TIFF &middot; max 50 MB</div>
-      <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.tiff,.tif" required />
-      <div class="file-name" id="fileName"></div>
+<header class="hdr">
+  <div class="hdr-inner">
+    <h1 class="app-title">&#128438; Print Forwarder</h1>
+    <nav class="tabs" role="tablist">
+      <button class="tab-btn active" data-tab="upload"   role="tab">Upload</button>
+      <button class="tab-btn"        data-tab="queue"    role="tab">
+        Print Queue
+        <span class="pill" id="qBadge" hidden>0</span>
+      </button>
+      <button class="tab-btn"        data-tab="services" role="tab">Services</button>
+    </nav>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- ── Upload ── -->
+  <div class="panel active" id="tab-upload" role="tabpanel">
+    <div class="card" style="max-width:480px">
+      <form id="printForm">
+        <div class="drop" id="dropZone">
+          <div class="drop-icon">&#128196;</div>
+          <div>Drop file here or <strong>click to browse</strong></div>
+          <div class="drop-hint">PDF &middot; DOCX &middot; TIFF &nbsp;|&nbsp; max 50 MB</div>
+          <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.tiff,.tif" required />
+          <div class="file-name" id="fileName"></div>
+        </div>
+        <div class="row">
+          <div class="fld">
+            <label class="lbl" for="printer">Printer</label>
+            <select id="printer" name="printer" class="sel">
+              <option value="">Loading&hellip;</option>
+            </select>
+          </div>
+          <div class="fld" style="max-width:90px">
+            <label class="lbl" for="copies">Copies</label>
+            <input type="number" id="copies" name="copies" class="inp" value="1" min="1" max="99" />
+          </div>
+        </div>
+        <button type="submit" id="submitBtn" class="btn btn-primary btn-full">Send to Printer</button>
+      </form>
+      <div id="printMsg" class="msg" hidden></div>
     </div>
+  </div>
 
-    <div class="row">
-      <div class="field">
-        <label for="printer">Printer</label>
-        <select id="printer" name="printer">
-          <option value="">Loading&hellip;</option>
+  <!-- ── Queue ── -->
+  <div class="panel" id="tab-queue" role="tabpanel">
+    <div class="toolbar">
+      <div class="toolbar-l">
+        <select id="qFilter" class="sel" style="width:auto">
+          <option value="not-completed">Active Jobs</option>
+          <option value="completed">Completed</option>
+          <option value="all">All Jobs</option>
         </select>
+        <button id="qRefresh" class="btn btn-ghost btn-sm">&#8635; Refresh</button>
       </div>
-      <div class="field" style="max-width:90px">
-        <label for="copies">Copies</label>
-        <input type="number" id="copies" name="copies" value="1" min="1" max="99" />
-      </div>
+      <label class="chk-label">
+        <input type="checkbox" id="autoRefresh" />
+        Auto-refresh (10 s)
+      </label>
     </div>
+    <div class="tbl-wrap">
+      <table class="tbl" aria-label="Print job queue">
+        <thead>
+          <tr>
+            <th>Job&nbsp;ID</th>
+            <th>Document</th>
+            <th>Printer</th>
+            <th>User</th>
+            <th>Status</th>
+            <th>Size</th>
+            <th>Queued</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="jobBody"></tbody>
+      </table>
+      <div id="qMsg" class="empty">Loading jobs&hellip;</div>
+    </div>
+  </div>
 
-    <button type="submit" id="submitBtn">Send to Printer</button>
-  </form>
+  <!-- ── Services ── -->
+  <div class="panel" id="tab-services" role="tabpanel">
+    <div class="card">
+      <div class="svc-row">
+        <div class="svc-info">
+          <h2>cups-browsed</h2>
+          <p>Discovers and registers network printers via DNS-SD/mDNS. Restart when network printers stop appearing, or when printer discovery becomes stale after a network change.</p>
+        </div>
+        <div class="svc-ctrl" id="svcCtrl"></div>
+      </div>
+      <div id="svcMsg" class="msg" hidden></div>
+    </div>
+  </div>
 
-  <div id="status"></div>
-</div>
+</main>
 
 <script>
-const dropZone  = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const fileName  = document.getElementById('fileName');
-const form      = document.getElementById('printForm');
-const submitBtn = document.getElementById('submitBtn');
-const status    = document.getElementById('status');
-const printerSel = document.getElementById('printer');
-
-// Load printers
-fetch('/printers').then(r => r.json()).then(data => {
-  if (data.error) { printerSel.innerHTML = '<option value="">Default</option>'; return; }
-  printerSel.innerHTML = data.printers.map(p =>
-    `<option value="${p}"${p === data.default ? ' selected' : ''}>${p}${p === data.default ? ' (default)' : ''}</option>`
-  ).join('');
-  if (!data.printers.length) printerSel.innerHTML = '<option value="">Default</option>';
-}).catch(() => { printerSel.innerHTML = '<option value="">Default</option>'; });
-
-// Drop zone wiring
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => {
-  e.preventDefault();
-  dropZone.classList.remove('drag-over');
-  if (e.dataTransfer.files.length) {
-    fileInput.files = e.dataTransfer.files;
-    fileName.textContent = e.dataTransfer.files[0].name;
-  }
-});
-fileInput.addEventListener('change', () => {
-  fileName.textContent = fileInput.files[0]?.name || '';
+// ── Tabs ───────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t));
+    if (t === 'queue') loadJobs();
+  });
 });
 
-function showStatus(msg, ok) {
-  status.textContent = msg;
-  status.className = ok ? 'ok' : 'err';
-  status.style.display = 'block';
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s ?? '—')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showMsg(el, text, ok) {
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+  el.hidden = false;
+}
+function fmtSize(kb) {
+  if (!kb) return '—';
+  return kb < 1024 ? kb + ' KB' : (kb / 1024).toFixed(1) + ' MB';
+}
+function fmtTime(unix) {
+  if (!unix) return '—';
+  return new Date(unix * 1000).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
 }
 
-form.addEventListener('submit', async e => {
+// ── Printers ──────────────────────────────────────────────────────────────────
+const printerSel = document.getElementById('printer');
+fetch('/printers').then(r => r.json()).then(d => {
+  if (d.error || !d.printers.length) { printerSel.innerHTML = '<option value="">Default</option>'; return; }
+  printerSel.innerHTML = d.printers.map(p =>
+    `<option value="${esc(p)}"${p === d.default ? ' selected' : ''}>${esc(p)}${p === d.default ? ' (default)' : ''}</option>`
+  ).join('');
+}).catch(() => { printerSel.innerHTML = '<option value="">Default</option>'; });
+
+// ── Upload form ───────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const fileName  = document.getElementById('fileName');
+const printForm = document.getElementById('printForm');
+const submitBtn = document.getElementById('submitBtn');
+const printMsg  = document.getElementById('printMsg');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('over');
+  if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; fileName.textContent = e.dataTransfer.files[0].name; }
+});
+fileInput.addEventListener('change', () => { fileName.textContent = fileInput.files[0]?.name || ''; });
+
+printForm.addEventListener('submit', async e => {
   e.preventDefault();
-  if (!fileInput.files.length) { showStatus('Please select a file.', false); return; }
-
+  if (!fileInput.files.length) { showMsg(printMsg, 'Please select a file.', false); return; }
   submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="spinner"></span> Sending&hellip;';
-  status.style.display = 'none';
-
-  const fd = new FormData(form);
+  submitBtn.innerHTML = '<span class="spin"></span> Sending…';
+  printMsg.hidden = true;
   try {
-    const res = await fetch('/print', { method: 'POST', body: fd });
+    const res  = await fetch('/print', { method: 'POST', body: new FormData(printForm) });
     const data = await res.json();
     if (res.ok && data.success) {
-      showStatus(`Job #${data.job_id} queued on "${data.printer}".`, true);
-      form.reset();
-      fileName.textContent = '';
+      showMsg(printMsg, `Job #${data.job_id} queued on “${data.printer}”.`, true);
+      printForm.reset(); fileName.textContent = '';
     } else {
-      showStatus(data.error || 'Unknown error.', false);
+      showMsg(printMsg, data.error || 'Unknown error.', false);
     }
-  } catch (err) {
-    showStatus('Network error: ' + err.message, false);
-  } finally {
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Send to Printer';
-  }
+  } catch (err) { showMsg(printMsg, 'Network error: ' + err.message, false); }
+  finally { submitBtn.disabled = false; submitBtn.textContent = 'Send to Printer'; }
 });
+
+// ── Job queue ─────────────────────────────────────────────────────────────────
+const jobBody   = document.getElementById('jobBody');
+const qMsg      = document.getElementById('qMsg');
+const qBadge    = document.getElementById('qBadge');
+const qFilter   = document.getElementById('qFilter');
+const autoChk   = document.getElementById('autoRefresh');
+const qRefresh  = document.getElementById('qRefresh');
+let   arTimer   = null;
+
+const STATE = {
+  3: { label: 'Pending',    cls: 's3' },
+  4: { label: 'Held',       cls: 's4' },
+  5: { label: 'Processing', cls: 's5' },
+  6: { label: 'Stopped',    cls: 's6' },
+  7: { label: 'Canceled',   cls: 's7' },
+  8: { label: 'Aborted',    cls: 's8' },
+  9: { label: 'Completed',  cls: 's9' },
+};
+
+async function loadJobs() {
+  qRefresh.disabled = true;
+  try {
+    const res  = await fetch('/jobs?which=' + qFilter.value);
+    const data = await res.json();
+    if (data.error) { jobBody.innerHTML = ''; qMsg.textContent = 'Error: ' + data.error; qMsg.hidden = false; return; }
+    renderJobs(data.jobs);
+  } catch (err) { qMsg.textContent = 'Network error: ' + err.message; qMsg.hidden = false; }
+  finally { qRefresh.disabled = false; }
+}
+
+function renderJobs(jobs) {
+  const active = jobs.filter(j => j.state <= 5).length;
+  qBadge.hidden = active === 0; qBadge.textContent = active;
+  if (!jobs.length) { jobBody.innerHTML = ''; qMsg.textContent = 'No jobs found.'; qMsg.hidden = false; return; }
+  qMsg.hidden = true;
+  jobBody.innerHTML = jobs.map(j => {
+    const m  = STATE[j.state] || { label: 'Unknown', cls: '' };
+    const canCancel  = j.state <= 6;
+    const canRelease = j.state === 4;
+    const acts = canCancel || canRelease
+      ? `${canRelease ? `<button class="btn btn-success btn-sm" onclick="confirmAct(${j.id},'release')">Release</button>` : ''}
+         ${canCancel  ? `<button class="btn btn-danger  btn-sm" onclick="confirmAct(${j.id},'cancel')">Cancel</button>` : ''}`
+      : '<span style="color:var(--muted);font-size:.8rem">—</span>';
+    return `<tr id="jr-${j.id}">
+      <td><code>${j.id}</code></td>
+      <td class="col-name" title="${esc(j.name)}">${esc(j.name)}</td>
+      <td>${esc(j.printer)}</td>
+      <td>${esc(j.user)}</td>
+      <td><span class="badge ${m.cls}">${m.label}</span></td>
+      <td>${fmtSize(j.size_kb)}</td>
+      <td>${fmtTime(j.created)}</td>
+      <td class="col-act"><div class="act" id="ja-${j.id}">${acts}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+function confirmAct(jobId, action) {
+  const el  = document.getElementById('ja-' + jobId);
+  const q   = action === 'cancel' ? 'Cancel this job?' : 'Release this held job?';
+  const cls = action === 'cancel' ? 'btn-danger' : 'btn-success';
+  el.innerHTML = `<div class="confirm-row">
+    <span class="lbl-q">${q}</span>
+    <button class="btn ${cls} btn-sm" onclick="doJobAct(${jobId},'${action}')">Yes</button>
+    <button class="btn btn-ghost btn-sm" onclick="loadJobs()">No</button>
+  </div>`;
+}
+
+async function doJobAct(jobId, action) {
+  const el = document.getElementById('ja-' + jobId);
+  el.innerHTML = '<span class="spin" style="color:var(--muted)"></span>';
+  try {
+    const res  = await fetch(`/jobs/${jobId}/${action}`, { method: 'POST' });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      const row = document.getElementById('jr-' + jobId);
+      if (row) { row.style.opacity = '.35'; row.style.transition = 'opacity .4s'; }
+      setTimeout(loadJobs, 500);
+    } else {
+      el.innerHTML = `<span class="msg err" style="padding:.2rem .5rem">${esc(data.error)}</span>`;
+    }
+  } catch (_) { el.innerHTML = '<span class="msg err" style="padding:.2rem .5rem">Network error</span>'; }
+}
+
+qFilter.addEventListener('change', loadJobs);
+qRefresh.addEventListener('click', loadJobs);
+autoChk.addEventListener('change', () => {
+  clearInterval(arTimer);
+  if (autoChk.checked) { arTimer = setInterval(loadJobs, 10000); loadJobs(); }
+});
+
+// ── Service restart ───────────────────────────────────────────────────────────
+const svcCtrl = document.getElementById('svcCtrl');
+const svcMsg  = document.getElementById('svcMsg');
+let svcState  = 'idle'; // idle | confirm | busy
+
+function renderSvc() {
+  if (svcState === 'idle') {
+    svcCtrl.innerHTML = `<button class="btn btn-warning" id="svcBtn">&#8635; Restart Service</button>`;
+    svcCtrl.querySelector('#svcBtn').addEventListener('click', () => { svcState = 'confirm'; renderSvc(); });
+  } else if (svcState === 'confirm') {
+    svcCtrl.innerHTML = `<div class="confirm-box">
+      <p>This will briefly interrupt network printer discovery. Continue?</p>
+      <div class="btn-row">
+        <button class="btn btn-warning btn-sm" id="svcYes">&#8635; Yes, Restart</button>
+        <button class="btn btn-ghost   btn-sm" id="svcNo">Cancel</button>
+      </div>
+    </div>`;
+    svcCtrl.querySelector('#svcYes').addEventListener('click', doRestartSvc);
+    svcCtrl.querySelector('#svcNo').addEventListener('click',  () => { svcState = 'idle'; renderSvc(); });
+  } else {
+    svcCtrl.innerHTML = `<span class="spin" style="color:var(--warning)"></span>&nbsp;<span style="color:var(--muted)">Restarting&hellip;</span>`;
+  }
+}
+
+async function doRestartSvc() {
+  svcState = 'busy'; renderSvc(); svcMsg.hidden = true;
+  try {
+    const res  = await fetch('/service/cups-browsed/restart', { method: 'POST' });
+    const data = await res.json();
+    showMsg(svcMsg, res.ok && data.success ? '✓ cups-browsed restarted successfully.' : (data.error || 'Restart failed.'), res.ok && data.success);
+  } catch (err) { showMsg(svcMsg, 'Network error: ' + err.message, false); }
+  svcState = 'idle'; renderSvc();
+}
+
+renderSvc();
 </script>
 </body>
 </html>

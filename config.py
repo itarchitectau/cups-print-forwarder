@@ -16,6 +16,14 @@ LIBREOFFICE_BIN = os.environ.get(
     "soffice",  # override with full path if not on PATH
 )
 
+# Command used to restart cups-browsed (space-separated).
+# In Docker with --privileged + --pid=host you can use:
+#   nsenter -t 1 -m -u -i -n -- systemctl restart cups-browsed
+RESTART_CUPS_BROWSED_CMD = os.environ.get(
+    "RESTART_CUPS_BROWSED_CMD",
+    "systemctl restart cups-browsed",
+)
+
 # Upload limits
 MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB
 ALLOWED_EXTENSIONS = {"pdf", "docx", "tiff", "tif"}
