@@ -1,0 +1,24 @@
+services:
+  print-forwarder:
+    build: .
+    image: cups-print-forwarder:latest
+    container_name: cups-print-forwarder
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      # Flask
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - FLASK_HOST=0.0.0.0
+      - FLASK_PORT=5000
+      # CUPS — points to the Docker host so the container can reach the
+      # CUPS daemon running on the host machine.
+      - CUPS_HOST=${CUPS_HOST:-host.docker.internal}
+      - CUPS_PORT=${CUPS_PORT:-631}
+      - CUPS_PRINTER=${CUPS_PRINTER:-}
+      # LibreOffice
+      - LIBREOFFICE_BIN=soffice
+    # Allows "host.docker.internal" to resolve on Linux Docker hosts.
+    # On Docker Desktop (Mac/Windows) this is handled automatically.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

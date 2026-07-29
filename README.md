@@ -127,6 +127,68 @@ server {
 | TIFF / TIF | TIFF (direct) |
 | DOCX | Converted to PDF via LibreOffice, then sent |
 
+## Docker
+
+The image bundles Python, pycups, and LibreOffice so there is nothing extra to install on the host beyond Docker itself.
+
+### Quick start with Docker Compose
+
+```bash
+# Build and start (first build takes a few minutes — LibreOffice is large)
+docker compose up -d --build
+
+# Tail logs
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
+The app is then available at `http://localhost:5000`.
+
+CUPS must be running on the **host machine**. The container reaches it via `host.docker.internal` (resolved automatically on Docker Desktop for Mac/Windows; on Linux the `extra_hosts` entry in `docker-compose.yml` wires this up automatically).
+
+### Build and run manually
+
+```bash
+docker build -t cups-print-forwarder .
+
+docker run -d \
+  --name cups-print-forwarder \
+  --add-host host.docker.internal:host-gateway \
+  -p 5000:5000 \
+  -e SECRET_KEY=change-me \
+  -e CUPS_HOST=host.docker.internal \
+  -e CUPS_PRINTER=MyPrinter \
+  cups-print-forwarder
+```
+
+### Passing configuration at runtime
+
+All settings from the [Configuration](#configuration) table can be passed as `-e` flags or in an `.env` file:
+
+```bash
+docker run -d \
+  --name cups-print-forwarder \
+  --add-host host.docker.internal:host-gateway \
+  -p 5000:5000 \
+  --env-file .env \
+  cups-print-forwarder
+```
+
+### Changing credentials in a container
+
+Mount a custom `config.py` over the one baked into the image:
+
+```bash
+docker run -d \
+  --name cups-print-forwarder \
+  --add-host host.docker.internal:host-gateway \
+  -p 5000:5000 \
+  -v $(pwd)/config.py:/app/config.py:ro \
+  cups-print-forwarder
+```
+
 ## Project structure
 
 ```
@@ -135,6 +197,9 @@ cups-print-forwarder/
 ├── config.py           # Settings and defaults
 ├── run.py              # Entry point
 ├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── .dockerignore
 ├── .env.example
 └── templates/
     └── index.html      # Drag-and-drop upload UI
@@ -152,7 +217,13 @@ Ensure LibreOffice is installed (`libreoffice --version`) and that the `LIBREOFF
 Some browsers cache Digest auth state across tabs. Open a private window or clear the browser's auth cache for the site.
 
 **pycups import error on non-Linux**
-`pycups` requires libcups. On Debian/Ubuntu: `sudo apt install libcups2-dev`. The app is not designed to run on Windows or macOS — deploy it on the Linux host running CUPS.
+`pycups` requires libcups. On Debian/Ubuntu: `sudo apt install libcups2-dev`. The app is not designed to run on Windows or macOS — deploy it on the Linux host running CUPS, or use the Docker image.
+
+**Container cannot reach CUPS on the host**
+Confirm CUPS is listening on all interfaces (not just `127.0.0.1`). Edit `/etc/cups/cupsd.conf` and ensure `Listen *:631` is set (or at minimum `Listen 0.0.0.0:631`), then restart CUPS. Also check that port 631 is not blocked by a host firewall for the Docker bridge network.
+
+**LibreOffice crashes inside the container**
+LibreOffice needs a writable user profile directory. The image runs as root so this should not be an issue by default, but if you run as a non-root user add `-e HOME=/tmp` to give LibreOffice a writable home.
 
 ## License
 
