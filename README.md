@@ -11,6 +11,7 @@ A lightweight web application that lets users upload documents (PDF, DOCX, TIFF)
 - Printer selection and copy count from the UI
 - Uploaded files are deleted from disk immediately after queuing
 - **Print Queue tab** — view active/completed jobs; cancel or release held jobs
+- **Wake Printers tab** — wake sleeping network printers via TCP probe (standby) or Wake-on-LAN (fully off)
 - **Services tab** — restart the `cups-browsed` network printer discovery service
 
 ## Requirements
@@ -192,20 +193,52 @@ docker run -d \
   cups-print-forwarder
 ```
 
+## Wake Printers
+
+The **Wake Printers** tab lets you maintain a list of network printer targets and wake them before printing.
+
+### How it works
+
+| Method | When it applies | What happens |
+|---|---|---|
+| **TCP probe** | Always (standby / sleep mode) | Opens a connection to ports 9100 (JetDirect), 631 (IPP), 80 (HTTP), 443 (HTTPS) — the connection attempt itself wakes most modern printers from sleep |
+| **Wake-on-LAN** | When a MAC address is configured | Broadcasts a magic packet over UDP so the printer's NIC powers the device on from a fully-off state |
+
+Both methods run on every **Wake** action. **Probe** only checks reachability without sending a WOL packet.
+
+### Adding a printer
+
+Click **+ Add Printer** and fill in:
+
+| Field | Required | Notes |
+|---|---|---|
+| Name | Yes | Display label (e.g. `HP LaserJet 4015`) |
+| IP / Hostname | Yes | e.g. `192.168.1.100` or `printer.local` |
+| MAC Address | No | e.g. `AA:BB:CC:DD:EE:FF` — enables WOL |
+
+Targets are persisted to `wake_targets.json` in the app directory (survives restarts).
+
+### Wake-on-LAN requirements
+
+- The printer NIC must support WOL (most network-connected printers do).
+- The printer must be on the same broadcast domain as the server (WOL does not cross routers by default).
+- In Docker, the container must be on the host network or use `--network host` for the broadcast to reach the printer subnet.
+
 ## Project structure
 
 ```
 cups-print-forwarder/
-├── app.py              # Flask routes, auth, CUPS submission logic
+├── app.py              # Flask routes, auth, CUPS & wake logic
 ├── config.py           # Settings and defaults
 ├── run.py              # Entry point
+├── wake_targets.json   # Persisted wake targets (auto-created)
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
 ├── .dockerignore
 ├── .env.example
 └── templates/
-    └── index.html      # Drag-and-drop upload UI
+    └── index.html      # Four-tab UI: Upload, Print Queue, Wake Printers, Services
 ```
 
 ## Troubleshooting
@@ -218,6 +251,15 @@ RESTART_CUPS_BROWSED_CMD=nsenter -t 1 -m -u -i -n -- systemctl restart cups-brow
 
 **Service restart returns "Command not found: systemctl"**
 The host is not using systemd. Try `service cups-browsed restart` or set `RESTART_CUPS_BROWSED_CMD` to the correct init command for your distro.
+
+**Probe always shows Offline even though the printer is reachable**
+The probe checks ports 9100, 631, 80, and 443 in parallel with a 2-second timeout. If the printer uses a non-standard port or has a host firewall, add a direct ping test: `ping <printer-ip>` from the server to confirm basic connectivity.
+
+**WOL packet sent but printer stays off**
+Confirm WOL is enabled in the printer's network settings (some models call it "Wake from Sleep" or "EWS sleep settings"). Also verify the server and printer are on the same L2 broadcast domain — WOL magic packets do not cross routers without a directed broadcast relay.
+
+**WOL does not work inside Docker**
+By default the Docker bridge network does not forward broadcasts to the host subnet. Either run the container with `--network host` (Linux only) or configure your network switch to relay directed broadcasts to the printer's IP.
 
 **"No default CUPS printer configured"**
 Set `CUPS_PRINTER` in your environment or `config.py`, or configure a default printer in CUPS (`lpadmin -d <printer-name>`).

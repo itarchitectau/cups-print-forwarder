@@ -1,5 +1,9 @@
+import json
 import os
+import socket
 import subprocess
+import threading
+import time
 import uuid
 
 import cups
@@ -50,6 +54,63 @@ def send_to_cups(file_path: str, job_title: str, printer: str, copies: int = 1) 
     if not printer:
         raise RuntimeError("No default CUPS printer configured.")
     return conn.printFile(printer, file_path, job_title, {"copies": str(copies)})
+
+
+# ── Wake-on-LAN / host probing ─────────────────────────────────────────────────
+
+WAKE_TARGETS_FILE = os.path.join(os.path.dirname(__file__), "wake_targets.json")
+# Common printer ports: JetDirect, IPP, HTTP, HTTPS
+_PROBE_PORTS = (9100, 631, 80, 443)
+
+
+def _load_wake_targets() -> list:
+    if not os.path.exists(WAKE_TARGETS_FILE):
+        return []
+    with open(WAKE_TARGETS_FILE) as f:
+        return json.load(f)
+
+
+def _save_wake_targets(targets: list) -> None:
+    with open(WAKE_TARGETS_FILE, "w") as f:
+        json.dump(targets, f, indent=2)
+
+
+def _wol_magic_packet(mac: str) -> bytes:
+    clean = mac.replace(":", "").replace("-", "").replace(".", "").upper()
+    if len(clean) != 12:
+        raise ValueError(f"Invalid MAC address: {mac!r}")
+    mac_bytes = bytes.fromhex(clean)
+    return b"\xff" * 6 + mac_bytes * 16
+
+
+def _send_wol(mac: str) -> None:
+    packet = _wol_magic_packet(mac)
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        for port in (9, 7):  # both WOL ports
+            s.sendto(packet, ("<broadcast>", port))
+
+
+def _probe_host(host: str, timeout: float = 2.0) -> dict:
+    """Probe all printer ports in parallel; returns {port: bool}."""
+    results: dict = {}
+    lock = threading.Lock()
+
+    def _check(port: int) -> None:
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                with lock:
+                    results[port] = True
+        except OSError:
+            with lock:
+                results[port] = False
+
+    threads = [threading.Thread(target=_check, args=(p,), daemon=True) for p in _PROBE_PORTS]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=timeout + 0.5)
+    return results
 
 
 # ── Pages ──────────────────────────────────────────────────────────────────────
@@ -171,6 +232,121 @@ def release_job(job_id):
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
     return jsonify({"success": True})
+
+
+# ── Wake targets ───────────────────────────────────────────────────────────────
+
+@app.route("/wake/targets")
+@auth.login_required
+def get_wake_targets():
+    return jsonify({"targets": _load_wake_targets()})
+
+
+@app.route("/wake/targets", methods=["POST"])
+@auth.login_required
+def add_wake_target():
+    data = request.get_json(force=True) or {}
+    name = (data.get("name") or "").strip()
+    host = (data.get("host") or "").strip()
+    mac  = (data.get("mac")  or "").strip()
+
+    if not name or not host:
+        return jsonify({"error": "name and host are required"}), 400
+    if mac:
+        try:
+            _wol_magic_packet(mac)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    targets = _load_wake_targets()
+    target = {"id": uuid.uuid4().hex, "name": name, "host": host, "mac": mac}
+    targets.append(target)
+    _save_wake_targets(targets)
+    return jsonify({"success": True, "target": target}), 201
+
+
+@app.route("/wake/targets/<tid>", methods=["DELETE"])
+@auth.login_required
+def delete_wake_target(tid):
+    targets = _load_wake_targets()
+    new_targets = [t for t in targets if t["id"] != tid]
+    if len(new_targets) == len(targets):
+        return jsonify({"error": "Target not found"}), 404
+    _save_wake_targets(new_targets)
+    return jsonify({"success": True})
+
+
+@app.route("/wake/targets/<tid>/probe", methods=["POST"])
+@auth.login_required
+def probe_wake_target(tid):
+    targets = _load_wake_targets()
+    target = next((t for t in targets if t["id"] == tid), None)
+    if not target:
+        return jsonify({"error": "Target not found"}), 404
+    probe = _probe_host(target["host"])
+    return jsonify({
+        "online": any(probe.values()),
+        "ports":  {str(k): v for k, v in probe.items()},
+    })
+
+
+@app.route("/wake/targets/<tid>/wake", methods=["POST"])
+@auth.login_required
+def wake_target(tid):
+    targets = _load_wake_targets()
+    target = next((t for t in targets if t["id"] == tid), None)
+    if not target:
+        return jsonify({"error": "Target not found"}), 404
+
+    result: dict = {"wol_sent": False, "wol_error": None, "online": False, "ports": {}}
+
+    if target.get("mac"):
+        try:
+            _send_wol(target["mac"])
+            result["wol_sent"] = True
+        except Exception as exc:
+            result["wol_error"] = str(exc)
+
+    # Brief pause, then TCP probe (also wakes standby printers)
+    time.sleep(1)
+    probe = _probe_host(target["host"])
+    result["online"] = any(probe.values())
+    result["ports"]  = {str(k): v for k, v in probe.items()}
+    return jsonify(result)
+
+
+@app.route("/wake/all", methods=["POST"])
+@auth.login_required
+def wake_all_targets():
+    targets = _load_wake_targets()
+    if not targets:
+        return jsonify({"error": "No wake targets configured"}), 400
+
+    results: dict = {}
+    for t in targets:
+        r: dict = {"wol_sent": False, "wol_error": None}
+        if t.get("mac"):
+            try:
+                _send_wol(t["mac"])
+                r["wol_sent"] = True
+            except Exception as exc:
+                r["wol_error"] = str(exc)
+        results[t["id"]] = r
+
+    time.sleep(2)
+
+    def probe_one(t: dict) -> None:
+        probe = _probe_host(t["host"])
+        results[t["id"]]["online"] = any(probe.values())
+        results[t["id"]]["ports"]  = {str(k): v for k, v in probe.items()}
+
+    threads = [threading.Thread(target=probe_one, args=(t,), daemon=True) for t in targets]
+    for th in threads:
+        th.start()
+    for th in threads:
+        th.join()
+
+    return jsonify({"results": results})
 
 
 # ── Services ───────────────────────────────────────────────────────────────────

@@ -7,18 +7,12 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
-      --bg: #f4f6f9;
-      --surface: #fff;
-      --border: #e5e7eb;
-      --text: #111827;
-      --muted: #6b7280;
-      --primary: #4f46e5;
-      --primary-h: #4338ca;
-      --danger: #dc2626;
-      --danger-h: #b91c1c;
-      --success: #059669;
-      --warning: #d97706;
-      --warning-h: #b45309;
+      --bg: #f4f6f9; --surface: #fff; --border: #e5e7eb;
+      --text: #111827; --muted: #6b7280;
+      --primary: #4f46e5; --primary-h: #4338ca;
+      --danger: #dc2626;  --danger-h: #b91c1c;
+      --success: #059669; --success-h: #047857;
+      --warning: #d97706; --warning-h: #b45309;
       --shadow: 0 1px 3px rgba(0,0,0,.10);
       --shadow-md: 0 4px 6px -1px rgba(0,0,0,.10), 0 2px 4px -1px rgba(0,0,0,.06);
     }
@@ -26,75 +20,78 @@
 
     /* ── Header ── */
     .hdr { background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); position: sticky; top: 0; z-index: 20; }
-    .hdr-inner { max-width: 980px; margin: 0 auto; padding: .7rem 1.5rem; display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
-    .app-title { font-size: 1.15rem; font-weight: 700; white-space: nowrap; }
-    .tabs { display: flex; gap: .2rem; }
+    .hdr-inner { max-width: 980px; margin: 0 auto; padding: .65rem 1.5rem; display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap; }
+    .app-title { font-size: 1.1rem; font-weight: 700; white-space: nowrap; }
+    .tabs { display: flex; gap: .15rem; }
     .tab-btn {
-      display: inline-flex; align-items: center; gap: .35rem;
-      padding: .4rem .85rem; border: none; background: transparent;
-      border-radius: 6px; font-size: .88rem; font-weight: 500;
+      display: inline-flex; align-items: center; gap: .3rem;
+      padding: .38rem .8rem; border: none; background: transparent;
+      border-radius: 6px; font-size: .86rem; font-weight: 500;
       color: var(--muted); cursor: pointer; transition: background .15s, color .15s;
     }
-    .tab-btn:hover { background: var(--bg); color: var(--text); }
+    .tab-btn:hover  { background: var(--bg); color: var(--text); }
     .tab-btn.active { background: #ede9fe; color: var(--primary); }
     .pill {
       display: inline-flex; align-items: center; justify-content: center;
-      min-width: 1.25em; height: 1.25em; padding: 0 .3em;
+      min-width: 1.2em; height: 1.2em; padding: 0 .28em;
       background: var(--primary); color: #fff;
-      border-radius: 9999px; font-size: .68rem; font-weight: 700;
+      border-radius: 9999px; font-size: .66rem; font-weight: 700;
     }
 
     /* ── Layout ── */
     .main { max-width: 980px; margin: 2rem auto; padding: 0 1.5rem; }
     .panel { display: none; }
     .panel.active { display: block; }
-    .card { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-md); padding: 2rem; }
+    .card { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-md); padding: 1.75rem 2rem; }
 
     /* ── Forms ── */
-    .lbl { display: block; font-size: .82rem; font-weight: 600; margin-bottom: .3rem; }
-    .fld { margin-bottom: 1rem; }
+    .lbl { display: block; font-size: .81rem; font-weight: 600; margin-bottom: .28rem; }
+    .opt { font-weight: 400; color: var(--muted); }
+    .fld { margin-bottom: .9rem; }
     .inp, .sel {
-      width: 100%; padding: .55rem .75rem;
+      width: 100%; padding: .5rem .72rem;
       border: 1px solid var(--border); border-radius: 6px;
-      font-size: .93rem; background: #fafafa; transition: border-color .15s;
+      font-size: .92rem; background: #fafafa; transition: border-color .15s;
     }
     .inp:focus, .sel:focus { outline: none; border-color: var(--primary); background: #fff; }
-    .row { display: flex; gap: .75rem; }
+    .row { display: flex; gap: .72rem; }
     .row .fld { flex: 1; }
 
     .drop {
       border: 2px dashed #c7cfe2; border-radius: 8px; padding: 2.5rem 1rem;
       text-align: center; cursor: pointer; color: var(--muted);
-      transition: border-color .15s, background .15s; margin-bottom: 1rem;
+      transition: border-color .15s, background .15s; margin-bottom: .9rem;
     }
     .drop.over { border-color: var(--primary); background: #eef2ff; }
     .drop input[type=file] { display: none; }
-    .drop-icon { font-size: 2.5rem; margin-bottom: .4rem; }
-    .drop-hint { font-size: .78rem; margin-top: .3rem; color: #9ca3af; }
-    .file-name { font-size: .84rem; font-weight: 500; color: var(--text); margin-top: .5rem; word-break: break-all; }
+    .drop-icon { font-size: 2.4rem; margin-bottom: .35rem; }
+    .drop-hint { font-size: .77rem; margin-top: .28rem; color: #9ca3af; }
+    .file-nm { font-size: .83rem; font-weight: 500; color: var(--text); margin-top: .45rem; word-break: break-all; }
 
     /* ── Buttons ── */
     .btn {
-      display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
-      padding: .55rem 1.1rem; border: none; border-radius: 7px;
-      font-size: .9rem; font-weight: 600; cursor: pointer; transition: background .15s, opacity .15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: .38rem;
+      padding: .5rem 1.05rem; border: none; border-radius: 7px;
+      font-size: .88rem; font-weight: 600; cursor: pointer; transition: background .15s, opacity .15s;
+      white-space: nowrap;
     }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
-    .btn-primary  { background: var(--primary); color: #fff; }
+    .btn-primary { background: var(--primary); color: #fff; }
     .btn-primary:not(:disabled):hover  { background: var(--primary-h); }
-    .btn-danger   { background: var(--danger);  color: #fff; }
+    .btn-danger  { background: var(--danger);  color: #fff; }
     .btn-danger:not(:disabled):hover   { background: var(--danger-h); }
-    .btn-success  { background: var(--success); color: #fff; }
-    .btn-success:not(:disabled):hover  { background: #047857; }
-    .btn-warning  { background: var(--warning); color: #fff; }
+    .btn-success { background: var(--success); color: #fff; }
+    .btn-success:not(:disabled):hover  { background: var(--success-h); }
+    .btn-warning { background: var(--warning); color: #fff; }
     .btn-warning:not(:disabled):hover  { background: var(--warning-h); }
-    .btn-ghost    { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost   { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
     .btn-ghost:not(:disabled):hover    { background: var(--border); }
-    .btn-sm  { padding: .3rem .7rem; font-size: .82rem; border-radius: 5px; }
+    .btn-sm   { padding: .28rem .65rem; font-size: .8rem; border-radius: 5px; }
     .btn-full { width: 100%; }
+    .btn-row  { display: flex; gap: .45rem; flex-wrap: wrap; }
 
-    /* ── Status messages ── */
-    .msg { padding: .65rem .9rem; border-radius: 6px; font-size: .88rem; margin-top: .75rem; }
+    /* ── Messages ── */
+    .msg { padding: .6rem .85rem; border-radius: 6px; font-size: .87rem; margin-top: .7rem; }
     .msg.ok  { background: #ecfdf5; color: #065f46; border: 1px solid #6ee7b7; }
     .msg.err { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
 
@@ -102,61 +99,70 @@
     .spin { display: inline-block; width: 1em; height: 1em; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; animation: rot .6s linear infinite; }
     @keyframes rot { to { transform: rotate(360deg); } }
 
-    /* ── Queue toolbar ── */
+    /* ── Toolbar ── */
     .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: .5rem; }
-    .toolbar-l { display: flex; gap: .5rem; align-items: center; }
-    .chk-label { display: flex; align-items: center; gap: .35rem; font-size: .83rem; cursor: pointer; user-select: none; }
+    .toolbar-l { display: flex; gap: .45rem; align-items: center; }
+    .chk-lbl { display: flex; align-items: center; gap: .32rem; font-size: .82rem; cursor: pointer; user-select: none; }
 
-    /* ── Table ── */
+    /* ── Queue table ── */
     .tbl-wrap { background: var(--surface); border-radius: 12px; box-shadow: var(--shadow-md); overflow: hidden; }
-    .tbl { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: .85rem; }
     .tbl thead { background: #f9fafb; }
-    .tbl th {
-      padding: .7rem 1rem; text-align: left;
-      font-size: .75rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--border);
-    }
-    .tbl td { padding: .65rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    .tbl th { padding: .65rem 1rem; text-align: left; font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--border); }
+    .tbl td { padding: .62rem 1rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
     .tbl tbody tr:last-child td { border-bottom: none; }
     .tbl tbody tr:hover { background: #f9fafb; }
-    .tbl .col-name { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .tbl .col-act { white-space: nowrap; }
+    .col-nm { max-width: 155px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .col-act { white-space: nowrap; }
+    .act { display: flex; gap: .32rem; align-items: center; }
+    .confirm-row { display: flex; gap: .32rem; align-items: center; flex-wrap: wrap; }
+    .lbl-q { font-size: .79rem; color: var(--muted); }
+    .empty { padding: 3rem 1rem; text-align: center; color: var(--muted); font-size: .88rem; }
 
     /* ── State badges ── */
-    .badge {
-      display: inline-flex; align-items: center; gap: .3em;
-      padding: .18em .55em; border-radius: 9999px;
-      font-size: .76rem; font-weight: 600; white-space: nowrap;
-    }
+    .badge { display: inline-flex; align-items: center; gap: .28em; padding: .17em .52em; border-radius: 9999px; font-size: .75rem; font-weight: 600; white-space: nowrap; }
     .badge::before { content: '●'; font-size: .55em; }
-    .s3 { background: #fef3c7; color: #92400e; }
-    .s4 { background: #ede9fe; color: #5b21b6; }
-    .s5 { background: #dbeafe; color: #1e40af; }
-    .s6 { background: #ffedd5; color: #9a3412; }
-    .s7 { background: #f3f4f6; color: var(--muted); }
-    .s8 { background: #fee2e2; color: #991b1b; }
-    .s9 { background: #d1fae5; color: #065f46; }
+    .s3{background:#fef3c7;color:#92400e} .s4{background:#ede9fe;color:#5b21b6}
+    .s5{background:#dbeafe;color:#1e40af} .s6{background:#ffedd5;color:#9a3412}
+    .s7{background:#f3f4f6;color:var(--muted)} .s8{background:#fee2e2;color:#991b1b}
+    .s9{background:#d1fae5;color:#065f46}
 
-    /* ── Row actions / confirm ── */
-    .act { display: flex; gap: .35rem; align-items: center; }
-    .confirm-row { display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; }
-    .confirm-row .lbl-q { font-size: .8rem; color: var(--muted); }
+    /* ── Wake printers ── */
+    .wake-toolbar { display: flex; gap: .5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .add-form { max-width: 460px; margin-bottom: 1rem; }
+    .add-form h3 { font-size: .95rem; font-weight: 700; margin-bottom: 1rem; }
 
-    /* ── Empty state ── */
-    .empty { padding: 3rem 1rem; text-align: center; color: var(--muted); font-size: .9rem; }
+    .pc-grid { display: grid; gap: .7rem; }
+    .pc {
+      background: var(--surface); border-radius: 10px; box-shadow: var(--shadow);
+      padding: 1rem 1.2rem; border-left: 4px solid var(--border);
+      transition: border-color .25s;
+    }
+    .pc[data-state=online]  { border-left-color: var(--success); }
+    .pc[data-state=offline] { border-left-color: var(--danger); }
+    .pc-hdr { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: .35rem; }
+    .pc-title { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+    .pc-name { font-weight: 600; font-size: .92rem; }
+    .pc-status { font-size: .8rem; }
+    .dot-u { color: var(--muted); }
+    .dot-on { color: var(--success); }
+    .dot-off { color: var(--danger); }
+    .pc-meta { display: flex; gap: .65rem; flex-wrap: wrap; font-size: .8rem; color: var(--muted); margin-bottom: .7rem; }
+    .pc-host { font-family: monospace; }
+    .tag { border-radius: 4px; padding: .1em .48em; }
+    .tag-mac   { background: #f3f4f6; font-family: monospace; }
+    .tag-nomac { background: #fff7ed; color: #92400e; }
+    .pc-result { background: #f9fafb; border-radius: 6px; padding: .45rem .7rem; font-size: .8rem; margin-bottom: .65rem; line-height: 1.5; }
+    .pc-act { display: flex; gap: .38rem; }
 
     /* ── Services ── */
     .svc-row { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; }
     .svc-info { flex: 1; min-width: 200px; }
-    .svc-info h2 { font-size: 1.05rem; font-weight: 700; margin-bottom: .4rem; }
-    .svc-info p  { font-size: .88rem; color: var(--muted); line-height: 1.55; }
-    .svc-ctrl { display: flex; flex-direction: column; gap: .5rem; align-items: flex-start; min-width: 180px; }
-    .confirm-box {
-      background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px;
-      padding: .75rem 1rem; font-size: .86rem;
-    }
-    .confirm-box p { color: #7c2d12; margin-bottom: .6rem; line-height: 1.4; }
-    .confirm-box .btn-row { display: flex; gap: .4rem; }
+    .svc-info h2 { font-size: 1rem; font-weight: 700; margin-bottom: .38rem; }
+    .svc-info p  { font-size: .87rem; color: var(--muted); line-height: 1.55; }
+    .svc-ctrl { display: flex; flex-direction: column; gap: .5rem; min-width: 180px; }
+    .confirm-box { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: .72rem .95rem; font-size: .85rem; }
+    .confirm-box p { color: #7c2d12; margin-bottom: .55rem; line-height: 1.4; }
   </style>
 </head>
 <body>
@@ -167,9 +173,9 @@
     <nav class="tabs" role="tablist">
       <button class="tab-btn active" data-tab="upload"   role="tab">Upload</button>
       <button class="tab-btn"        data-tab="queue"    role="tab">
-        Print Queue
-        <span class="pill" id="qBadge" hidden>0</span>
+        Print Queue <span class="pill" id="qBadge" hidden>0</span>
       </button>
+      <button class="tab-btn"        data-tab="wake"     role="tab">Wake Printers</button>
       <button class="tab-btn"        data-tab="services" role="tab">Services</button>
     </nav>
   </div>
@@ -179,14 +185,14 @@
 
   <!-- ── Upload ── -->
   <div class="panel active" id="tab-upload" role="tabpanel">
-    <div class="card" style="max-width:480px">
+    <div class="card" style="max-width:470px">
       <form id="printForm">
         <div class="drop" id="dropZone">
           <div class="drop-icon">&#128196;</div>
           <div>Drop file here or <strong>click to browse</strong></div>
           <div class="drop-hint">PDF &middot; DOCX &middot; TIFF &nbsp;|&nbsp; max 50 MB</div>
           <input type="file" id="fileInput" name="file" accept=".pdf,.docx,.tiff,.tif" required />
-          <div class="file-name" id="fileName"></div>
+          <div class="file-nm" id="fileName"></div>
         </div>
         <div class="row">
           <div class="fld">
@@ -195,7 +201,7 @@
               <option value="">Loading&hellip;</option>
             </select>
           </div>
-          <div class="fld" style="max-width:90px">
+          <div class="fld" style="max-width:88px">
             <label class="lbl" for="copies">Copies</label>
             <input type="number" id="copies" name="copies" class="inp" value="1" min="1" max="99" />
           </div>
@@ -206,7 +212,7 @@
     </div>
   </div>
 
-  <!-- ── Queue ── -->
+  <!-- ── Print Queue ── -->
   <div class="panel" id="tab-queue" role="tabpanel">
     <div class="toolbar">
       <div class="toolbar-l">
@@ -217,28 +223,62 @@
         </select>
         <button id="qRefresh" class="btn btn-ghost btn-sm">&#8635; Refresh</button>
       </div>
-      <label class="chk-label">
-        <input type="checkbox" id="autoRefresh" />
-        Auto-refresh (10 s)
+      <label class="chk-lbl">
+        <input type="checkbox" id="autoRefresh" /> Auto-refresh (10 s)
       </label>
     </div>
     <div class="tbl-wrap">
       <table class="tbl" aria-label="Print job queue">
         <thead>
           <tr>
-            <th>Job&nbsp;ID</th>
-            <th>Document</th>
-            <th>Printer</th>
-            <th>User</th>
-            <th>Status</th>
-            <th>Size</th>
-            <th>Queued</th>
-            <th>Actions</th>
+            <th>Job ID</th><th>Document</th><th>Printer</th><th>User</th>
+            <th>Status</th><th>Size</th><th>Queued</th><th>Actions</th>
           </tr>
         </thead>
         <tbody id="jobBody"></tbody>
       </table>
       <div id="qMsg" class="empty">Loading jobs&hellip;</div>
+    </div>
+  </div>
+
+  <!-- ── Wake Printers ── -->
+  <div class="panel" id="tab-wake" role="tabpanel">
+
+    <div class="wake-toolbar">
+      <button id="addPrinterBtn" class="btn btn-primary btn-sm">&#43; Add Printer</button>
+      <button id="wakeAllBtn"    class="btn btn-warning btn-sm">&#9889; Wake All</button>
+    </div>
+
+    <!-- Add form -->
+    <div class="card add-form" id="addForm" hidden>
+      <h3>Add Printer</h3>
+      <div class="fld">
+        <label class="lbl" for="wpName">Name</label>
+        <input type="text" id="wpName" class="inp" placeholder="HP LaserJet Pro" />
+      </div>
+      <div class="fld">
+        <label class="lbl" for="wpHost">IP Address / Hostname</label>
+        <input type="text" id="wpHost" class="inp" placeholder="192.168.1.100" />
+      </div>
+      <div class="fld">
+        <label class="lbl" for="wpMac">
+          MAC Address <span class="opt">(optional &mdash; required for Wake-on-LAN when printer is fully off)</span>
+        </label>
+        <input type="text" id="wpMac" class="inp" placeholder="AA:BB:CC:DD:EE:FF" />
+      </div>
+      <div class="btn-row">
+        <button id="wpAddBtn"    class="btn btn-primary btn-sm">Add Printer</button>
+        <button id="wpCancelBtn" class="btn btn-ghost   btn-sm">Cancel</button>
+      </div>
+      <div id="wpMsg" class="msg" hidden></div>
+    </div>
+
+    <div id="wakeAllMsg" class="msg" hidden style="margin-bottom:.9rem"></div>
+
+    <!-- Printer cards -->
+    <div class="pc-grid" id="printerList"></div>
+    <div id="printerEmpty" class="empty" hidden>
+      No printers configured. Click &ldquo;+ Add Printer&rdquo; to add one.
     </div>
   </div>
 
@@ -248,7 +288,7 @@
       <div class="svc-row">
         <div class="svc-info">
           <h2>cups-browsed</h2>
-          <p>Discovers and registers network printers via DNS-SD/mDNS. Restart when network printers stop appearing, or when printer discovery becomes stale after a network change.</p>
+          <p>Discovers and registers network printers via DNS-SD&nbsp;/&nbsp;mDNS. Restart when network printers stop appearing, or when printer discovery becomes stale after a network change.</p>
         </div>
         <div class="svc-ctrl" id="svcCtrl"></div>
       </div>
@@ -266,38 +306,28 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === t));
     document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + t));
     if (t === 'queue') loadJobs();
+    if (t === 'wake')  initWakeTab();
   });
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s) {
-  return String(s ?? '—')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function showMsg(el, text, ok) {
-  el.textContent = text;
-  el.className = 'msg ' + (ok ? 'ok' : 'err');
-  el.hidden = false;
+  el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); el.hidden = false;
 }
-function fmtSize(kb) {
-  if (!kb) return '—';
-  return kb < 1024 ? kb + ' KB' : (kb / 1024).toFixed(1) + ' MB';
-}
-function fmtTime(unix) {
-  if (!unix) return '—';
-  return new Date(unix * 1000).toLocaleString(undefined, {
-    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+function fmtSize(kb) { return !kb ? '—' : kb < 1024 ? kb + ' KB' : (kb/1024).toFixed(1) + ' MB'; }
+function fmtTime(u)  {
+  return !u ? '—' : new Date(u*1000).toLocaleString(undefined,{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
-// ── Printers ──────────────────────────────────────────────────────────────────
-const printerSel = document.getElementById('printer');
-fetch('/printers').then(r => r.json()).then(d => {
-  if (d.error || !d.printers.length) { printerSel.innerHTML = '<option value="">Default</option>'; return; }
-  printerSel.innerHTML = d.printers.map(p =>
-    `<option value="${esc(p)}"${p === d.default ? ' selected' : ''}>${esc(p)}${p === d.default ? ' (default)' : ''}</option>`
-  ).join('');
-}).catch(() => { printerSel.innerHTML = '<option value="">Default</option>'; });
+// ── Printers (for upload form) ─────────────────────────────────────────────────
+fetch('/printers').then(r=>r.json()).then(d=>{
+  const sel = document.getElementById('printer');
+  if (d.error||!d.printers.length){sel.innerHTML='<option value="">Default</option>';return;}
+  sel.innerHTML=d.printers.map(p=>`<option value="${esc(p)}"${p===d.default?' selected':''}>${esc(p)}${p===d.default?' (default)':''}</option>`).join('');
+}).catch(()=>{document.getElementById('printer').innerHTML='<option value="">Default</option>';});
 
 // ── Upload form ───────────────────────────────────────────────────────────────
 const dropZone = document.getElementById('dropZone');
@@ -307,158 +337,303 @@ const printForm = document.getElementById('printForm');
 const submitBtn = document.getElementById('submitBtn');
 const printMsg  = document.getElementById('printMsg');
 
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('over'));
-dropZone.addEventListener('drop', e => {
+dropZone.addEventListener('click', ()=>fileInput.click());
+dropZone.addEventListener('dragover', e=>{e.preventDefault();dropZone.classList.add('over');});
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('over'));
+dropZone.addEventListener('drop', e=>{
   e.preventDefault(); dropZone.classList.remove('over');
-  if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; fileName.textContent = e.dataTransfer.files[0].name; }
+  if(e.dataTransfer.files.length){fileInput.files=e.dataTransfer.files;fileName.textContent=e.dataTransfer.files[0].name;}
 });
-fileInput.addEventListener('change', () => { fileName.textContent = fileInput.files[0]?.name || ''; });
+fileInput.addEventListener('change',()=>{fileName.textContent=fileInput.files[0]?.name||'';});
 
-printForm.addEventListener('submit', async e => {
+printForm.addEventListener('submit', async e=>{
   e.preventDefault();
-  if (!fileInput.files.length) { showMsg(printMsg, 'Please select a file.', false); return; }
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<span class="spin"></span> Sending…';
-  printMsg.hidden = true;
-  try {
-    const res  = await fetch('/print', { method: 'POST', body: new FormData(printForm) });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      showMsg(printMsg, `Job #${data.job_id} queued on “${data.printer}”.`, true);
-      printForm.reset(); fileName.textContent = '';
-    } else {
-      showMsg(printMsg, data.error || 'Unknown error.', false);
-    }
-  } catch (err) { showMsg(printMsg, 'Network error: ' + err.message, false); }
-  finally { submitBtn.disabled = false; submitBtn.textContent = 'Send to Printer'; }
+  if(!fileInput.files.length){showMsg(printMsg,'Please select a file.',false);return;}
+  submitBtn.disabled=true; submitBtn.innerHTML='<span class="spin"></span> Sending…'; printMsg.hidden=true;
+  try{
+    const res=await fetch('/print',{method:'POST',body:new FormData(printForm)});
+    const d=await res.json();
+    if(res.ok&&d.success){showMsg(printMsg,`Job #${d.job_id} queued on "${d.printer}".`,true);printForm.reset();fileName.textContent='';}
+    else showMsg(printMsg,d.error||'Unknown error.',false);
+  }catch(err){showMsg(printMsg,'Network error: '+err.message,false);}
+  finally{submitBtn.disabled=false;submitBtn.textContent='Send to Printer';}
 });
 
-// ── Job queue ─────────────────────────────────────────────────────────────────
-const jobBody   = document.getElementById('jobBody');
-const qMsg      = document.getElementById('qMsg');
-const qBadge    = document.getElementById('qBadge');
-const qFilter   = document.getElementById('qFilter');
-const autoChk   = document.getElementById('autoRefresh');
-const qRefresh  = document.getElementById('qRefresh');
-let   arTimer   = null;
-
+// ── Print queue ───────────────────────────────────────────────────────────────
+const jobBody = document.getElementById('jobBody');
+const qMsg    = document.getElementById('qMsg');
+const qBadge  = document.getElementById('qBadge');
+const qFilter = document.getElementById('qFilter');
+const autoChk = document.getElementById('autoRefresh');
+let arTimer = null;
 const STATE = {
-  3: { label: 'Pending',    cls: 's3' },
-  4: { label: 'Held',       cls: 's4' },
-  5: { label: 'Processing', cls: 's5' },
-  6: { label: 'Stopped',    cls: 's6' },
-  7: { label: 'Canceled',   cls: 's7' },
-  8: { label: 'Aborted',    cls: 's8' },
-  9: { label: 'Completed',  cls: 's9' },
+  3:{label:'Pending',cls:'s3'},4:{label:'Held',cls:'s4'},5:{label:'Processing',cls:'s5'},
+  6:{label:'Stopped',cls:'s6'},7:{label:'Canceled',cls:'s7'},8:{label:'Aborted',cls:'s8'},9:{label:'Completed',cls:'s9'},
 };
-
-async function loadJobs() {
-  qRefresh.disabled = true;
-  try {
-    const res  = await fetch('/jobs?which=' + qFilter.value);
-    const data = await res.json();
-    if (data.error) { jobBody.innerHTML = ''; qMsg.textContent = 'Error: ' + data.error; qMsg.hidden = false; return; }
-    renderJobs(data.jobs);
-  } catch (err) { qMsg.textContent = 'Network error: ' + err.message; qMsg.hidden = false; }
-  finally { qRefresh.disabled = false; }
+async function loadJobs(){
+  const btn=document.getElementById('qRefresh'); btn.disabled=true;
+  try{
+    const res=await fetch('/jobs?which='+qFilter.value);
+    const d=await res.json();
+    if(d.error){jobBody.innerHTML='';qMsg.textContent='Error: '+d.error;qMsg.hidden=false;return;}
+    const active=d.jobs.filter(j=>j.state<=5).length;
+    qBadge.hidden=active===0; qBadge.textContent=active;
+    if(!d.jobs.length){jobBody.innerHTML='';qMsg.textContent='No jobs found.';qMsg.hidden=false;return;}
+    qMsg.hidden=true;
+    jobBody.innerHTML=d.jobs.map(j=>{
+      const m=STATE[j.state]||{label:'Unknown',cls:''};
+      const cr=j.state<=6,rel=j.state===4;
+      const acts=cr||rel
+        ?`${rel?`<button class="btn btn-success btn-sm" onclick="confirmAct(${j.id},'release')">Release</button>`:''}
+           ${cr ?`<button class="btn btn-danger  btn-sm" onclick="confirmAct(${j.id},'cancel')">Cancel</button>` :''}`
+        :'<span style="color:var(--muted);font-size:.79rem">—</span>';
+      return`<tr id="jr-${j.id}">
+        <td><code>${j.id}</code></td>
+        <td class="col-nm" title="${esc(j.name)}">${esc(j.name)}</td>
+        <td>${esc(j.printer)}</td><td>${esc(j.user)}</td>
+        <td><span class="badge ${m.cls}">${m.label}</span></td>
+        <td>${fmtSize(j.size_kb)}</td><td>${fmtTime(j.created)}</td>
+        <td class="col-act"><div class="act" id="ja-${j.id}">${acts}</div></td>
+      </tr>`;
+    }).join('');
+  }catch(err){qMsg.textContent='Network error: '+err.message;qMsg.hidden=false;}
+  finally{btn.disabled=false;}
 }
-
-function renderJobs(jobs) {
-  const active = jobs.filter(j => j.state <= 5).length;
-  qBadge.hidden = active === 0; qBadge.textContent = active;
-  if (!jobs.length) { jobBody.innerHTML = ''; qMsg.textContent = 'No jobs found.'; qMsg.hidden = false; return; }
-  qMsg.hidden = true;
-  jobBody.innerHTML = jobs.map(j => {
-    const m  = STATE[j.state] || { label: 'Unknown', cls: '' };
-    const canCancel  = j.state <= 6;
-    const canRelease = j.state === 4;
-    const acts = canCancel || canRelease
-      ? `${canRelease ? `<button class="btn btn-success btn-sm" onclick="confirmAct(${j.id},'release')">Release</button>` : ''}
-         ${canCancel  ? `<button class="btn btn-danger  btn-sm" onclick="confirmAct(${j.id},'cancel')">Cancel</button>` : ''}`
-      : '<span style="color:var(--muted);font-size:.8rem">—</span>';
-    return `<tr id="jr-${j.id}">
-      <td><code>${j.id}</code></td>
-      <td class="col-name" title="${esc(j.name)}">${esc(j.name)}</td>
-      <td>${esc(j.printer)}</td>
-      <td>${esc(j.user)}</td>
-      <td><span class="badge ${m.cls}">${m.label}</span></td>
-      <td>${fmtSize(j.size_kb)}</td>
-      <td>${fmtTime(j.created)}</td>
-      <td class="col-act"><div class="act" id="ja-${j.id}">${acts}</div></td>
-    </tr>`;
-  }).join('');
-}
-
-function confirmAct(jobId, action) {
-  const el  = document.getElementById('ja-' + jobId);
-  const q   = action === 'cancel' ? 'Cancel this job?' : 'Release this held job?';
-  const cls = action === 'cancel' ? 'btn-danger' : 'btn-success';
-  el.innerHTML = `<div class="confirm-row">
-    <span class="lbl-q">${q}</span>
+function confirmAct(jobId,action){
+  const el=document.getElementById('ja-'+jobId);
+  const q=action==='cancel'?'Cancel this job?':'Release this held job?';
+  const cls=action==='cancel'?'btn-danger':'btn-success';
+  el.innerHTML=`<div class="confirm-row"><span class="lbl-q">${q}</span>
     <button class="btn ${cls} btn-sm" onclick="doJobAct(${jobId},'${action}')">Yes</button>
-    <button class="btn btn-ghost btn-sm" onclick="loadJobs()">No</button>
-  </div>`;
+    <button class="btn btn-ghost btn-sm" onclick="loadJobs()">No</button></div>`;
 }
-
-async function doJobAct(jobId, action) {
-  const el = document.getElementById('ja-' + jobId);
-  el.innerHTML = '<span class="spin" style="color:var(--muted)"></span>';
-  try {
-    const res  = await fetch(`/jobs/${jobId}/${action}`, { method: 'POST' });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      const row = document.getElementById('jr-' + jobId);
-      if (row) { row.style.opacity = '.35'; row.style.transition = 'opacity .4s'; }
-      setTimeout(loadJobs, 500);
-    } else {
-      el.innerHTML = `<span class="msg err" style="padding:.2rem .5rem">${esc(data.error)}</span>`;
-    }
-  } catch (_) { el.innerHTML = '<span class="msg err" style="padding:.2rem .5rem">Network error</span>'; }
+async function doJobAct(jobId,action){
+  const el=document.getElementById('ja-'+jobId);
+  el.innerHTML='<span class="spin" style="color:var(--muted)"></span>';
+  try{
+    const res=await fetch(`/jobs/${jobId}/${action}`,{method:'POST'});
+    const d=await res.json();
+    if(res.ok&&d.success){
+      const row=document.getElementById('jr-'+jobId);
+      if(row){row.style.opacity='.35';row.style.transition='opacity .4s';}
+      setTimeout(loadJobs,500);
+    }else el.innerHTML=`<span class="msg err" style="padding:.18rem .5rem">${esc(d.error)}</span>`;
+  }catch(_){el.innerHTML='<span class="msg err" style="padding:.18rem .5rem">Network error</span>';}
 }
-
-qFilter.addEventListener('change', loadJobs);
-qRefresh.addEventListener('click', loadJobs);
-autoChk.addEventListener('change', () => {
+qFilter.addEventListener('change',loadJobs);
+document.getElementById('qRefresh').addEventListener('click',loadJobs);
+autoChk.addEventListener('change',()=>{
   clearInterval(arTimer);
-  if (autoChk.checked) { arTimer = setInterval(loadJobs, 10000); loadJobs(); }
+  if(autoChk.checked){arTimer=setInterval(loadJobs,10000);loadJobs();}
 });
 
-// ── Service restart ───────────────────────────────────────────────────────────
-const svcCtrl = document.getElementById('svcCtrl');
-const svcMsg  = document.getElementById('svcMsg');
-let svcState  = 'idle'; // idle | confirm | busy
+// ── Wake Printers ─────────────────────────────────────────────────────────────
+const PORT_NAMES = {9100:'JetDirect',631:'IPP',80:'HTTP',443:'HTTPS'};
+let wakeTargets = [];
+let wakeTabInited = false;
 
-function renderSvc() {
-  if (svcState === 'idle') {
-    svcCtrl.innerHTML = `<button class="btn btn-warning" id="svcBtn">&#8635; Restart Service</button>`;
-    svcCtrl.querySelector('#svcBtn').addEventListener('click', () => { svcState = 'confirm'; renderSvc(); });
-  } else if (svcState === 'confirm') {
-    svcCtrl.innerHTML = `<div class="confirm-box">
+function initWakeTab(){
+  if(!wakeTabInited){wakeTabInited=true;loadWakeTargets();}
+}
+
+async function loadWakeTargets(){
+  try{
+    const res=await fetch('/wake/targets');
+    const d=await res.json();
+    wakeTargets=d.targets||[];
+    renderWakeTargets();
+  }catch(err){
+    document.getElementById('printerEmpty').textContent='Failed to load: '+err.message;
+    document.getElementById('printerEmpty').hidden=false;
+  }
+}
+
+function renderWakeTargets(){
+  const list=document.getElementById('printerList');
+  const empty=document.getElementById('printerEmpty');
+  empty.hidden=wakeTargets.length>0;
+  if(!wakeTargets.length){list.innerHTML='';return;}
+  list.innerHTML=wakeTargets.map(t=>`
+    <div class="pc" id="pc-${t.id}" data-state="unknown">
+      <div class="pc-hdr">
+        <div class="pc-title">
+          <span class="pc-name">${esc(t.name)}</span>
+          <span class="pc-status dot-u" id="pst-${t.id}">&#9679; Unknown</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="removeTarget('${t.id}')">&#10005; Remove</button>
+      </div>
+      <div class="pc-meta">
+        <span class="pc-host">${esc(t.host)}</span>
+        ${t.mac
+          ?`<span class="tag tag-mac">${esc(t.mac)}</span>`
+          :`<span class="tag tag-nomac">No MAC &middot; standby-wake only</span>`}
+      </div>
+      <div class="pc-result" id="pres-${t.id}" hidden></div>
+      <div class="pc-act" id="pact-${t.id}">
+        <button class="btn btn-ghost   btn-sm" onclick="probeTarget('${t.id}')">&#9678; Probe</button>
+        <button class="btn btn-warning btn-sm" onclick="wakeTarget('${t.id}')">&#9889; Wake</button>
+      </div>
+    </div>`).join('');
+}
+
+function setCardStatus(id,state,statusHtml,resultHtml){
+  const card=document.getElementById('pc-'+id);
+  const st=document.getElementById('pst-'+id);
+  const res=document.getElementById('pres-'+id);
+  if(card) card.dataset.state=state;
+  if(st){st.className='pc-status '+(state==='online'?'dot-on':state==='offline'?'dot-off':'dot-u');st.innerHTML=statusHtml;}
+  if(res){res.innerHTML=resultHtml||'';res.hidden=!resultHtml;}
+}
+
+function setActBusy(id,busy){
+  const el=document.getElementById('pact-'+id);
+  if(!el)return;
+  el.innerHTML=busy
+    ?'<span class="spin" style="color:var(--muted)"></span>'
+    :`<button class="btn btn-ghost   btn-sm" onclick="probeTarget('${id}')">&#9678; Probe</button>
+      <button class="btn btn-warning btn-sm" onclick="wakeTarget('${id}')">&#9889; Wake</button>`;
+}
+
+function onlineHtml(ports){
+  const responding=Object.entries(ports).filter(([,v])=>v).map(([p])=>PORT_NAMES[+p]||'port '+p);
+  return responding.length?`Responding via: ${responding.join(', ')}`:null;
+}
+
+async function probeTarget(id){
+  setActBusy(id,true);
+  try{
+    const res=await fetch(`/wake/targets/${id}/probe`,{method:'POST'});
+    const d=await res.json();
+    if(d.error) setCardStatus(id,'unknown','&#9679; Unknown','Error: '+esc(d.error));
+    else if(d.online) setCardStatus(id,'online','&#9679; Online',onlineHtml(d.ports)||'Online');
+    else setCardStatus(id,'offline','&#9679; Offline','No response on any probed port (JetDirect 9100, IPP 631, HTTP 80, HTTPS 443).');
+  }catch(err){setCardStatus(id,'unknown','&#9679; Unknown','Network error: '+err.message);}
+  setActBusy(id,false);
+}
+
+async function wakeTarget(id){
+  setActBusy(id,true);
+  try{
+    const res=await fetch(`/wake/targets/${id}/wake`,{method:'POST'});
+    const d=await res.json();
+    const lines=[];
+    if(d.wol_sent)  lines.push('&#9889; WOL magic packet sent.');
+    if(d.wol_error) lines.push('WOL error: '+esc(d.wol_error));
+    if(d.online){
+      setCardStatus(id,'online','&#9679; Online',[...lines,onlineHtml(d.ports)].filter(Boolean).join(' &middot; '));
+    }else{
+      const note=d.wol_sent
+        ?'Printer may take 30&ndash;60&thinsp;s to boot &mdash; click Probe to check again.'
+        :'No response. Try adding a MAC address to enable Wake-on-LAN.';
+      setCardStatus(id,'offline','&#9679; Offline',[...lines,note].filter(Boolean).join(' '));
+    }
+  }catch(err){setCardStatus(id,'unknown','&#9679; Unknown','Network error: '+err.message);}
+  setActBusy(id,false);
+}
+
+async function removeTarget(id){
+  if(!confirm('Remove this printer from the wake list?'))return;
+  const card=document.getElementById('pc-'+id);
+  if(card){card.style.opacity='.35';card.style.transition='opacity .3s';}
+  try{
+    await fetch(`/wake/targets/${id}`,{method:'DELETE'});
+    wakeTargets=wakeTargets.filter(t=>t.id!==id);
+    renderWakeTargets();
+  }catch(_){if(card)card.style.opacity='1';}
+}
+
+// Add printer form
+const addForm=document.getElementById('addForm');
+document.getElementById('addPrinterBtn').addEventListener('click',()=>{
+  addForm.hidden=!addForm.hidden;
+  if(!addForm.hidden) document.getElementById('wpName').focus();
+});
+document.getElementById('wpCancelBtn').addEventListener('click',()=>{
+  addForm.hidden=true; document.getElementById('wpMsg').hidden=true;
+});
+document.getElementById('wpAddBtn').addEventListener('click',async()=>{
+  const name=document.getElementById('wpName').value.trim();
+  const host=document.getElementById('wpHost').value.trim();
+  const mac =document.getElementById('wpMac').value.trim();
+  const wpMsg=document.getElementById('wpMsg');
+  if(!name||!host){showMsg(wpMsg,'Name and host are required.',false);return;}
+  const btn=document.getElementById('wpAddBtn');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
+  try{
+    const res=await fetch('/wake/targets',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name,host,mac}),
+    });
+    const d=await res.json();
+    if(res.ok&&d.success){
+      wakeTargets.push(d.target); renderWakeTargets();
+      addForm.hidden=true; wpMsg.hidden=true;
+      document.getElementById('wpName').value='';
+      document.getElementById('wpHost').value='';
+      document.getElementById('wpMac').value='';
+    }else showMsg(wpMsg,d.error||'Failed to add printer.',false);
+  }catch(err){showMsg(wpMsg,'Network error: '+err.message,false);}
+  btn.disabled=false; btn.textContent='Add Printer';
+});
+
+// Wake All
+document.getElementById('wakeAllBtn').addEventListener('click',async()=>{
+  const btn=document.getElementById('wakeAllBtn');
+  const allMsg=document.getElementById('wakeAllMsg');
+  btn.disabled=true; btn.innerHTML='<span class="spin"></span> Waking&hellip;';
+  allMsg.hidden=true;
+  try{
+    const res=await fetch('/wake/all',{method:'POST'});
+    const d=await res.json();
+    if(d.error){showMsg(allMsg,d.error,false);}
+    else{
+      const results=d.results;
+      wakeTargets.forEach(t=>{
+        const r=results[t.id]; if(!r)return;
+        if(r.online) setCardStatus(t.id,'online','&#9679; Online',r.wol_sent?'WOL sent &middot; '+onlineHtml(r.ports||{}):onlineHtml(r.ports||{})||'Online');
+        else setCardStatus(t.id,'offline','&#9679; Offline',r.wol_sent?'WOL sent &middot; allow 30&ndash;60&thinsp;s then probe.':'Offline');
+      });
+      const on=Object.values(results).filter(r=>r.online).length;
+      const total=wakeTargets.length;
+      showMsg(allMsg,
+        `${on} of ${total} printer${total!==1?'s':''} online.`+(on<total?' WOL packets sent to offline printers &mdash; allow 30&ndash;60 s then probe.':''),
+        on===total);
+    }
+  }catch(err){showMsg(allMsg,'Network error: '+err.message,false);}
+  btn.disabled=false; btn.innerHTML='&#9889; Wake All';
+});
+
+// ── Services ──────────────────────────────────────────────────────────────────
+const svcCtrl=document.getElementById('svcCtrl');
+const svcMsg=document.getElementById('svcMsg');
+let svcState='idle';
+
+function renderSvc(){
+  if(svcState==='idle'){
+    svcCtrl.innerHTML=`<button class="btn btn-warning" id="svcBtn">&#8635; Restart Service</button>`;
+    svcCtrl.querySelector('#svcBtn').addEventListener('click',()=>{svcState='confirm';renderSvc();});
+  }else if(svcState==='confirm'){
+    svcCtrl.innerHTML=`<div class="confirm-box">
       <p>This will briefly interrupt network printer discovery. Continue?</p>
       <div class="btn-row">
         <button class="btn btn-warning btn-sm" id="svcYes">&#8635; Yes, Restart</button>
         <button class="btn btn-ghost   btn-sm" id="svcNo">Cancel</button>
-      </div>
-    </div>`;
-    svcCtrl.querySelector('#svcYes').addEventListener('click', doRestartSvc);
-    svcCtrl.querySelector('#svcNo').addEventListener('click',  () => { svcState = 'idle'; renderSvc(); });
-  } else {
-    svcCtrl.innerHTML = `<span class="spin" style="color:var(--warning)"></span>&nbsp;<span style="color:var(--muted)">Restarting&hellip;</span>`;
+      </div></div>`;
+    svcCtrl.querySelector('#svcYes').addEventListener('click',doRestartSvc);
+    svcCtrl.querySelector('#svcNo').addEventListener('click',()=>{svcState='idle';renderSvc();});
+  }else{
+    svcCtrl.innerHTML=`<span class="spin" style="color:var(--warning)"></span>&nbsp;<span style="color:var(--muted)">Restarting&hellip;</span>`;
   }
 }
-
-async function doRestartSvc() {
-  svcState = 'busy'; renderSvc(); svcMsg.hidden = true;
-  try {
-    const res  = await fetch('/service/cups-browsed/restart', { method: 'POST' });
-    const data = await res.json();
-    showMsg(svcMsg, res.ok && data.success ? '✓ cups-browsed restarted successfully.' : (data.error || 'Restart failed.'), res.ok && data.success);
-  } catch (err) { showMsg(svcMsg, 'Network error: ' + err.message, false); }
-  svcState = 'idle'; renderSvc();
+async function doRestartSvc(){
+  svcState='busy'; renderSvc(); svcMsg.hidden=true;
+  try{
+    const res=await fetch('/service/cups-browsed/restart',{method:'POST'});
+    const d=await res.json();
+    showMsg(svcMsg,res.ok&&d.success?'&#10003; cups-browsed restarted successfully.':(d.error||'Restart failed.'),res.ok&&d.success);
+  }catch(err){showMsg(svcMsg,'Network error: '+err.message,false);}
+  svcState='idle'; renderSvc();
 }
-
 renderSvc();
 </script>
 </body>
