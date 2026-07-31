@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import socket
 import subprocess
 import threading
@@ -48,12 +49,28 @@ def docx_to_pdf(docx_path: str) -> str:
     return os.path.join(out_dir, base + ".pdf")
 
 
-def send_to_cups(file_path: str, job_title: str, printer: str, copies: int = 1) -> int:
+_VALID_SIDES = {"one-sided", "two-sided-long-edge", "two-sided-short-edge"}
+_PAGE_RANGE_RE = re.compile(r'^\d+(-\d+)?(,\d+(-\d+)?)*$')
+
+
+def send_to_cups(
+    file_path: str,
+    job_title: str,
+    printer: str,
+    copies: int = 1,
+    page_ranges: str = "",
+    sides: str = "",
+) -> int:
     conn = cups_conn()
     printer = printer or conn.getDefault()
     if not printer:
         raise RuntimeError("No default CUPS printer configured.")
-    return conn.printFile(printer, file_path, job_title, {"copies": str(copies)})
+    options: dict = {"copies": str(copies)}
+    if page_ranges:
+        options["page-ranges"] = page_ranges
+    if sides and sides in _VALID_SIDES:
+        options["sides"] = sides
+    return conn.printFile(printer, file_path, job_title, options)
 
 
 # ── Wake-on-LAN / host probing ─────────────────────────────────────────────────
@@ -157,6 +174,14 @@ def print_file():
     copies = max(1, min(int(request.form.get("copies", 1)), 99))
     printer_name = request.form.get("printer", "").strip() or config.CUPS_PRINTER
 
+    page_ranges = request.form.get("page_ranges", "").strip()
+    if page_ranges and not _PAGE_RANGE_RE.match(page_ranges):
+        return jsonify({"error": "Invalid page range. Use formats like: 1-5  or  1,3,7-10"}), 400
+
+    sides = request.form.get("sides", "").strip()
+    if sides not in _VALID_SIDES:
+        sides = ""
+
     safe_name = secure_filename(f.filename)
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{safe_name}")
     f.save(save_path)
@@ -165,8 +190,11 @@ def print_file():
     try:
         if safe_name.rsplit(".", 1)[-1].lower() == "docx":
             print_path = docx_to_pdf(save_path)
-        job_id = send_to_cups(print_path, job_title=safe_name,
-                              printer=printer_name, copies=copies)
+        job_id = send_to_cups(
+            print_path, job_title=safe_name,
+            printer=printer_name, copies=copies,
+            page_ranges=page_ranges, sides=sides,
+        )
     except subprocess.CalledProcessError:
         return jsonify({"error": "DOCX conversion failed. Is LibreOffice installed?"}), 500
     except RuntimeError as exc:

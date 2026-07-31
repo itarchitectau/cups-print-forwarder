@@ -206,6 +206,23 @@
             <input type="number" id="copies" name="copies" class="inp" value="1" min="1" max="99" />
           </div>
         </div>
+        <div class="row">
+          <div class="fld">
+            <label class="lbl" for="page_ranges">
+              Page Range <span class="opt">(optional)</span>
+            </label>
+            <input type="text" id="page_ranges" name="page_ranges" class="inp"
+                   placeholder="e.g. 1-5 or 1,3,7-10" pattern="^\d+(-\d+)?(,\d+(-\d+)?)*$" />
+          </div>
+          <div class="fld">
+            <label class="lbl" for="sides">Sides</label>
+            <select id="sides" name="sides" class="sel">
+              <option value="one-sided">Single sided</option>
+              <option value="two-sided-long-edge">Both sides &mdash; long edge (portrait)</option>
+              <option value="two-sided-short-edge">Both sides &mdash; short edge (landscape)</option>
+            </select>
+          </div>
+        </div>
         <button type="submit" id="submitBtn" class="btn btn-primary btn-full">Send to Printer</button>
       </form>
       <div id="printMsg" class="msg" hidden></div>
