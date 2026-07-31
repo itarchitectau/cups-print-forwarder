@@ -8,7 +8,7 @@ A lightweight web application that lets users upload documents (PDF, DOCX, TIFF)
 - Forwards print jobs to any printer registered with a local or remote CUPS server
 - HTTP Digest Authentication — credentials never travel in plaintext
 - DOCX-to-PDF conversion via LibreOffice (headless)
-- Printer selection and copy count from the UI
+- Printer selection, copy count, page range, and duplex mode from the UI
 - Uploaded files are deleted from disk immediately after queuing
 - **Print Queue tab** — view active/completed jobs; cancel or release held jobs
 - **Wake Printers tab** — wake sleeping network printers via TCP probe (standby) or Wake-on-LAN (fully off)
@@ -131,6 +131,19 @@ server {
 | TIFF / TIF | TIFF (direct) |
 | DOCX | Converted to PDF via LibreOffice, then sent |
 
+## Print options
+
+The upload form exposes four CUPS options:
+
+| Field | CUPS option | Notes |
+|---|---|---|
+| Printer | — | Selects the destination queue; falls back to the CUPS default |
+| Copies | `copies` | 1–99 |
+| Page Range | `page-ranges` | Optional. Accepts standard CUPS notation: a single page (`5`), a range (`1-5`), or a comma-separated mix (`1-3,5,7-10`). Leave blank to print all pages. |
+| Sides | `sides` | `one-sided` (default), `two-sided-long-edge` (portrait / book binding), or `two-sided-short-edge` (landscape / calendar binding) |
+
+The page range is validated on the server before submission; an invalid format returns a 400 error rather than being silently ignored by CUPS.
+
 ## Docker
 
 The image bundles Python, pycups, and LibreOffice so there is nothing extra to install on the host beyond Docker itself.
@@ -221,8 +234,8 @@ Targets are persisted to `wake_targets.json` in the app directory (survives rest
 ### Wake-on-LAN requirements
 
 - The printer NIC must support WOL (most network-connected printers do).
-- The printer must be on the same broadcast domain as the server (WOL does not cross routers by default).
-- In Docker, the container must be on the host network or use `--network host` for the broadcast to reach the printer subnet.
+- Each Wake action sends the magic packet **twice**: as a UDP broadcast (reaches same-subnet devices) and as a unicast directly to the printer's IP (routable across subnets/routers). No router configuration is required for cross-subnet WOL.
+- In Docker, broadcasts do not leave the bridge network by default. Use `--network host` (Linux) or rely on the unicast delivery, which works without host-networking.
 
 ## Project structure
 
@@ -256,10 +269,10 @@ The host is not using systemd. Try `service cups-browsed restart` or set `RESTAR
 The probe checks ports 9100, 631, 80, and 443 in parallel with a 2-second timeout. If the printer uses a non-standard port or has a host firewall, add a direct ping test: `ping <printer-ip>` from the server to confirm basic connectivity.
 
 **WOL packet sent but printer stays off**
-Confirm WOL is enabled in the printer's network settings (some models call it "Wake from Sleep" or "EWS sleep settings"). Also verify the server and printer are on the same L2 broadcast domain — WOL magic packets do not cross routers without a directed broadcast relay.
+Confirm WOL is enabled in the printer's network settings (some models call it "Wake from Sleep" or "EWS sleep settings"). The app sends the magic packet both as a broadcast and as a unicast to the printer's IP, so router boundaries are not the cause. Check that the printer's MAC address is entered correctly in the Wake Printers tab.
 
-**WOL does not work inside Docker**
-By default the Docker bridge network does not forward broadcasts to the host subnet. Either run the container with `--network host` (Linux only) or configure your network switch to relay directed broadcasts to the printer's IP.
+**WOL unicast is sent but still no response**
+Some managed switches drop unsolicited UDP traffic to powered-off hosts (the ARP entry expires while the printer is off). Enable "WOL forwarding" or "directed-broadcast" on the switch port, or use a VLAN that permits these frames.
 
 **"No default CUPS printer configured"**
 Set `CUPS_PRINTER` in your environment or `config.py`, or configure a default printer in CUPS (`lpadmin -d <printer-name>`).
