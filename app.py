@@ -83,12 +83,17 @@ def _wol_magic_packet(mac: str) -> bytes:
     return b"\xff" * 6 + mac_bytes * 16
 
 
-def _send_wol(mac: str) -> None:
+def _send_wol(mac: str, host: str | None = None) -> None:
     packet = _wol_magic_packet(mac)
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        for port in (9, 7):  # both WOL ports
+        # Limited broadcast — only reaches devices on the server's local subnet.
+        for port in (9, 7):
             s.sendto(packet, ("<broadcast>", port))
+        # Unicast to the printer's known IP — routable across subnets/routers.
+        if host:
+            for port in (9, 7):
+                s.sendto(packet, (host, port))
 
 
 def _probe_host(host: str, timeout: float = 2.0) -> dict:
@@ -302,7 +307,7 @@ def wake_target(tid):
 
     if target.get("mac"):
         try:
-            _send_wol(target["mac"])
+            _send_wol(target["mac"], host=target["host"])
             result["wol_sent"] = True
         except Exception as exc:
             result["wol_error"] = str(exc)
@@ -327,7 +332,7 @@ def wake_all_targets():
         r: dict = {"wol_sent": False, "wol_error": None}
         if t.get("mac"):
             try:
-                _send_wol(t["mac"])
+                _send_wol(t["mac"], host=t["host"])
                 r["wol_sent"] = True
             except Exception as exc:
                 r["wol_error"] = str(exc)
