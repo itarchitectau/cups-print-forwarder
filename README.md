@@ -8,7 +8,8 @@ A lightweight web application that lets users upload documents (PDF, DOCX, TIFF)
 - Forwards print jobs to any printer registered with a local or remote CUPS server
 - HTTP Digest Authentication — credentials never travel in plaintext
 - DOCX-to-PDF conversion via LibreOffice (headless)
-- Printer selection, copy count, page range, and duplex mode from the UI
+- Printer selection, copy count, page range, duplex mode, and color mode from the UI
+- **Document preview** before printing — PDF and DOCX rendered in-browser via PDF.js; TIFF shown as a PNG thumbnail
 - Uploaded files are deleted from disk immediately after queuing
 - **Print Queue tab** — view active/completed jobs; cancel or release held jobs
 - **Wake Printers tab** — wake sleeping network printers via TCP probe (standby) or Wake-on-LAN (fully off)
@@ -133,7 +134,7 @@ server {
 
 ## Print options
 
-The upload form exposes four CUPS options:
+The upload form exposes these CUPS options:
 
 | Field | CUPS option | Notes |
 |---|---|---|
@@ -141,8 +142,21 @@ The upload form exposes four CUPS options:
 | Copies | `copies` | 1–99 |
 | Page Range | `page-ranges` | Optional. Accepts standard CUPS notation: a single page (`5`), a range (`1-5`), or a comma-separated mix (`1-3,5,7-10`). Leave blank to print all pages. |
 | Sides | `sides` | `one-sided` (default), `two-sided-long-edge` (portrait / book binding), or `two-sided-short-edge` (landscape / calendar binding) |
+| Color | `print-color-mode` | `color` (default) or `monochrome` (black & white). Silently ignored if the printer does not support the attribute. |
 
 The page range is validated on the server before submission; an invalid format returns a 400 error rather than being silently ignored by CUPS.
+
+## Document preview
+
+When a file is selected, a live preview appears alongside the upload form before the job is sent to the printer.
+
+| Format | Preview method |
+|---|---|
+| PDF | Rendered client-side via [PDF.js](https://mozilla.github.io/pdf.js/) — no server round-trip |
+| DOCX | Converted to PDF on the server (`POST /preview`), then rendered via PDF.js |
+| TIFF | First page exported to PNG on the server (`POST /preview`), displayed as an image |
+
+Multi-page PDFs and DOCX files show a page navigator (◀ / ▶). The preview upload is separate from the print job — the file is converted, streamed back, and immediately deleted from disk.
 
 ## Docker
 

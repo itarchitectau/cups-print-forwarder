@@ -1,3 +1,4 @@
+import io
 import json
 import os
 import re
@@ -8,8 +9,9 @@ import time
 import uuid
 
 import cups
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, send_file
 from flask_httpauth import HTTPDigestAuth
+from PIL import Image
 from werkzeug.utils import secure_filename
 
 import config
@@ -50,6 +52,7 @@ def docx_to_pdf(docx_path: str) -> str:
 
 
 _VALID_SIDES = {"one-sided", "two-sided-long-edge", "two-sided-short-edge"}
+_VALID_COLOR_MODES = {"color", "monochrome"}
 _PAGE_RANGE_RE = re.compile(r'^\d+(-\d+)?(,\d+(-\d+)?)*$')
 
 
@@ -60,6 +63,7 @@ def send_to_cups(
     copies: int = 1,
     page_ranges: str = "",
     sides: str = "",
+    color_mode: str = "",
 ) -> int:
     conn = cups_conn()
     printer = printer or conn.getDefault()
@@ -70,6 +74,8 @@ def send_to_cups(
         options["page-ranges"] = page_ranges
     if sides and sides in _VALID_SIDES:
         options["sides"] = sides
+    if color_mode and color_mode in _VALID_COLOR_MODES:
+        options["print-color-mode"] = color_mode
     return conn.printFile(printer, file_path, job_title, options)
 
 
@@ -157,6 +163,59 @@ def list_printers():
     return jsonify({"printers": printers, "default": default})
 
 
+# ── Preview ────────────────────────────────────────────────────────────────────
+
+@app.route("/preview", methods=["POST"])
+@auth.login_required
+def preview_document():
+    if "file" not in request.files:
+        return jsonify({"error": "No file"}), 400
+    f = request.files["file"]
+    if not f.filename or not allowed_file(f.filename):
+        return jsonify({"error": "Unsupported file type"}), 415
+
+    safe_name = secure_filename(f.filename)
+    ext = safe_name.rsplit(".", 1)[-1].lower()
+    save_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{safe_name}")
+    f.save(save_path)
+
+    extra: list = []
+    try:
+        if ext in ("pdf", "docx"):
+            out_path = save_path
+            if ext == "docx":
+                out_path = docx_to_pdf(save_path)
+                extra.append(out_path)
+            with open(out_path, "rb") as fp:
+                data = fp.read()
+            return Response(data, mimetype="application/pdf",
+                            headers={"Content-Disposition": "inline"})
+
+        # TIFF — return first page as PNG
+        img = Image.open(save_path)
+        try:
+            img.seek(0)
+        except (EOFError, AttributeError):
+            pass
+        if img.mode not in ("RGB", "RGBA", "L"):
+            img = img.convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return send_file(buf, mimetype="image/png")
+
+    except subprocess.CalledProcessError:
+        return jsonify({"error": "DOCX conversion failed. Is LibreOffice installed?"}), 500
+    except Exception as exc:
+        return jsonify({"error": str(exc)}), 500
+    finally:
+        for p in {save_path, *extra}:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
 # ── Print ──────────────────────────────────────────────────────────────────────
 
 @app.route("/print", methods=["POST"])
@@ -182,6 +241,10 @@ def print_file():
     if sides not in _VALID_SIDES:
         sides = ""
 
+    color_mode = request.form.get("color_mode", "").strip()
+    if color_mode not in _VALID_COLOR_MODES:
+        color_mode = ""
+
     safe_name = secure_filename(f.filename)
     save_path = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{safe_name}")
     f.save(save_path)
@@ -194,6 +257,7 @@ def print_file():
             print_path, job_title=safe_name,
             printer=printer_name, copies=copies,
             page_ranges=page_ranges, sides=sides,
+            color_mode=color_mode,
         )
     except subprocess.CalledProcessError:
         return jsonify({"error": "DOCX conversion failed. Is LibreOffice installed?"}), 500
