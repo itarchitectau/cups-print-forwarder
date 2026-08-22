@@ -291,17 +291,29 @@ def list_jobs():
         which = "not-completed"
     try:
         conn = cups_conn()
-        raw = conn.getJobs(which_jobs=which, my_jobs=False)
+        raw = conn.getJobs(
+            which_jobs=which,
+            my_jobs=False,
+            requested_attributes=[
+                "job-id",
+                "job-name",
+                "job-state",
+                "job-printer-uri",
+                "job-originating-user-name",
+                "job-k-octets",
+                "time-at-creation",
+            ],
+        )
         jobs = [
             {
                 "id":          jid,
-                "name":        attrs.get("job-name", "—"),
-                "state":       attrs.get("job-state", 0),
-                "state_label": _JOB_STATE_LABELS.get(attrs.get("job-state", 0), "Unknown"),
-                "printer":     attrs.get("job-printer-uri", "").rstrip("/").split("/")[-1],
-                "user":        attrs.get("job-originating-user-name", "—"),
-                "size_kb":     attrs.get("job-k-octets", 0),
-                "created":     attrs.get("time-at-creation", 0),
+                "name":        attrs.get("job-name") or "—",
+                "state":       attrs.get("job-state") or 0,
+                "state_label": _JOB_STATE_LABELS.get(attrs.get("job-state") or 0, "Unknown"),
+                "printer":     (attrs.get("job-printer-uri") or "").rstrip("/").split("/")[-1] or "—",
+                "user":        attrs.get("job-originating-user-name") or "—",
+                "size_kb":     attrs.get("job-k-octets") or 0,
+                "created":     attrs.get("time-at-creation") or 0,
             }
             for jid, attrs in raw.items()
         ]
