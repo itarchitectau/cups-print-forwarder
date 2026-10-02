@@ -563,11 +563,13 @@ async function loadJobs(){
     qMsg.hidden=true;
     jobBody.innerHTML=d.jobs.map(j=>{
       const m=STATE[j.state]||{label:'Unknown',cls:''};
-      const cr=j.state<=6,rel=j.state===4;
-      const acts=cr||rel
-        ?`${rel?`<button class="btn btn-success btn-sm" onclick="confirmAct(${j.id},'release')">Release</button>`:''}
-           ${cr ?`<button class="btn btn-danger  btn-sm" onclick="confirmAct(${j.id},'cancel')">Cancel</button>` :''}`
-        :'<span style="color:var(--muted);font-size:.79rem">—</span>';
+      const cr=j.state<=6,rel=j.state===4,del=j.state>=7||j.local_only;
+      const acts=del
+        ?`<button class="btn btn-ghost btn-sm" onclick="confirmAct(${j.id},'delete')">&#128465; Delete</button>`
+        :cr||rel
+          ?`${rel?`<button class="btn btn-success btn-sm" onclick="confirmAct(${j.id},'release')">Release</button>`:''}
+             ${cr?`<button class="btn btn-danger btn-sm" onclick="confirmAct(${j.id},'cancel')">Cancel</button>`:''}`
+          :'<span style="color:var(--muted);font-size:.79rem">—</span>';
       return`<tr id="jr-${j.id}">
         <td><code>${j.id}</code></td>
         <td class="col-nm" title="${esc(j.name)}">${esc(j.name)}</td>
@@ -582,8 +584,8 @@ async function loadJobs(){
 }
 function confirmAct(jobId,action){
   const el=document.getElementById('ja-'+jobId);
-  const q=action==='cancel'?'Cancel this job?':'Release this held job?';
-  const cls=action==='cancel'?'btn-danger':'btn-success';
+  const q=action==='cancel'?'Cancel this job?':action==='delete'?'Remove from history?':'Release this held job?';
+  const cls=action==='release'?'btn-success':'btn-danger';
   el.innerHTML=`<div class="confirm-row"><span class="lbl-q">${q}</span>
     <button class="btn ${cls} btn-sm" onclick="doJobAct(${jobId},'${action}')">Yes</button>
     <button class="btn btn-ghost btn-sm" onclick="loadJobs()">No</button></div>`;
@@ -591,8 +593,9 @@ function confirmAct(jobId,action){
 async function doJobAct(jobId,action){
   const el=document.getElementById('ja-'+jobId);
   el.innerHTML='<span class="spin" style="color:var(--muted)"></span>';
+  const url=action==='delete'?`/jobs/${jobId}/delete`:`/jobs/${jobId}/${action}`;
   try{
-    const res=await fetch(`/jobs/${jobId}/${action}`,{method:'POST'});
+    const res=await fetch(url,{method:'POST'});
     const d=await res.json();
     if(res.ok&&d.success){
       const row=document.getElementById('jr-'+jobId);

@@ -3,6 +3,7 @@ import json
 import os
 import re
 import socket
+import sqlite3
 import subprocess
 import threading
 import time
@@ -141,6 +142,62 @@ def _probe_host(host: str, timeout: float = 2.0) -> dict:
     return results
 
 
+# ── Local job store ────────────────────────────────────────────────────────────
+
+JOBS_DB = os.path.join(os.path.dirname(__file__), "jobs.db")
+
+
+def _init_jobs_db() -> None:
+    with sqlite3.connect(JOBS_DB) as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                job_id  INTEGER PRIMARY KEY,
+                name    TEXT    NOT NULL DEFAULT '',
+                printer TEXT    NOT NULL DEFAULT '',
+                user    TEXT    NOT NULL DEFAULT '',
+                created INTEGER NOT NULL DEFAULT 0,
+                deleted INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+
+_init_jobs_db()
+
+
+def _store_job(job_id: int, name: str, printer: str, user: str) -> None:
+    with sqlite3.connect(JOBS_DB) as db:
+        db.execute(
+            "INSERT OR IGNORE INTO jobs (job_id, name, printer, user, created, deleted) "
+            "VALUES (?, ?, ?, ?, ?, 0)",
+            (job_id, name, printer, user, int(time.time())),
+        )
+
+
+def _get_stored_jobs() -> dict:
+    with sqlite3.connect(JOBS_DB) as db:
+        rows = db.execute(
+            "SELECT job_id, name, printer, user, created, deleted FROM jobs"
+        ).fetchall()
+    return {
+        row[0]: {
+            "name": row[1], "printer": row[2], "user": row[3],
+            "created": row[4], "deleted": bool(row[5]),
+        }
+        for row in rows
+    }
+
+
+def _mark_job_deleted(job_id: int) -> None:
+    with sqlite3.connect(JOBS_DB) as db:
+        # Ensure a row exists (handles jobs not in local store), then mark deleted.
+        db.execute(
+            "INSERT OR IGNORE INTO jobs (job_id, name, printer, user, created, deleted) "
+            "VALUES (?, '', '', '', 0, 0)",
+            (job_id,),
+        )
+        db.execute("UPDATE jobs SET deleted=1 WHERE job_id=?", (job_id,))
+
+
 # ── Pages ──────────────────────────────────────────────────────────────────────
 
 @app.route("/")
@@ -272,6 +329,7 @@ def print_file():
             except OSError:
                 pass
 
+    _store_job(job_id, name=safe_name, printer=printer_name or "default", user=auth.current_user())
     return jsonify({"success": True, "job_id": job_id, "printer": printer_name or "default"})
 
 
@@ -304,19 +362,44 @@ def list_jobs():
                 "time-at-creation",
             ],
         )
-        jobs = [
-            {
-                "id":          jid,
-                "name":        attrs.get("job-name") or "—",
-                "state":       attrs.get("job-state") or 0,
-                "state_label": _JOB_STATE_LABELS.get(attrs.get("job-state") or 0, "Unknown"),
-                "printer":     (attrs.get("job-printer-uri") or "").rstrip("/").split("/")[-1] or "—",
-                "user":        attrs.get("job-originating-user-name") or "—",
-                "size_kb":     attrs.get("job-k-octets") or 0,
-                "created":     attrs.get("time-at-creation") or 0,
-            }
-            for jid, attrs in raw.items()
-        ]
+        stored = _get_stored_jobs()
+
+        jobs = []
+        for jid, attrs in raw.items():
+            rec = stored.get(jid, {})
+            if rec.get("deleted"):
+                continue
+            state = attrs.get("job-state") or 0
+            jobs.append({
+                "id":         jid,
+                "name":       attrs.get("job-name") or rec.get("name") or "—",
+                "state":      state,
+                "state_label": _JOB_STATE_LABELS.get(state, "Unknown"),
+                "printer":    (attrs.get("job-printer-uri") or "").rstrip("/").split("/")[-1]
+                              or rec.get("printer") or "—",
+                "user":       attrs.get("job-originating-user-name") or rec.get("user") or "—",
+                "size_kb":    attrs.get("job-k-octets") or 0,
+                "created":    attrs.get("time-at-creation") or rec.get("created") or 0,
+                "local_only": False,
+            })
+
+        # Include locally stored jobs that CUPS no longer tracks (purged after restart).
+        if which in ("completed", "all"):
+            cups_ids = set(raw.keys())
+            for jid, rec in stored.items():
+                if jid not in cups_ids and not rec["deleted"]:
+                    jobs.append({
+                        "id":         jid,
+                        "name":       rec["name"] or "—",
+                        "state":      9,
+                        "state_label": "Completed",
+                        "printer":    rec["printer"] or "—",
+                        "user":       rec["user"] or "—",
+                        "size_kb":    0,
+                        "created":    rec["created"] or 0,
+                        "local_only": True,
+                    })
+
         jobs.sort(key=lambda j: j["created"], reverse=True)
     except Exception as exc:
         return jsonify({"error": str(exc)}), 503
@@ -340,6 +423,18 @@ def release_job(job_id):
         cups_conn().setJobHoldUntil(job_id, "no-hold")
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+    return jsonify({"success": True})
+
+
+@app.route("/jobs/<int:job_id>/delete", methods=["POST"])
+@auth.login_required
+def delete_job(job_id):
+    # Best-effort purge from CUPS — may fail if already purged; always update local store.
+    try:
+        cups_conn().cancelJob(job_id, purge=True)
+    except Exception:
+        pass
+    _mark_job_deleted(job_id)
     return jsonify({"success": True})
 
 
