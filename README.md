@@ -11,7 +11,7 @@ A lightweight web application that lets users upload documents (PDF, DOCX, TIFF)
 - Printer selection, copy count, page range, duplex mode, and color mode from the UI
 - **Document preview** before printing — PDF and DOCX rendered in-browser via PDF.js; TIFF shown as a PNG thumbnail
 - Uploaded files are deleted from disk immediately after queuing
-- **Print Queue tab** — view active/completed jobs; cancel or release held jobs
+- **Print Queue tab** — view active/completed jobs; cancel or release held jobs; delete completed jobs; job history persists across Flask and CUPS restarts via a local SQLite store
 - **Wake Printers tab** — wake sleeping network printers via TCP probe (standby) or Wake-on-LAN (fully off)
 - **Services tab** — restart the `cups-browsed` network printer discovery service
 
@@ -158,6 +158,33 @@ When a file is selected, a live preview appears alongside the upload form before
 
 Multi-page PDFs and DOCX files show a page navigator (◀ / ▶). The preview upload is separate from the print job — the file is converted, streamed back, and immediately deleted from disk.
 
+## Print Queue
+
+The Print Queue tab shows live CUPS job data supplemented by a local SQLite history store (`jobs.db`).
+
+### Job actions
+
+| Action | Available when | What happens |
+|---|---|---|
+| **Release** | Job is Held (state 4) | Clears the hold; job returns to Pending |
+| **Cancel** | Job is active (states 3–6) | Cancels the job in CUPS |
+| **Delete** | Job is terminal (Canceled / Aborted / Completed) or history-only | Purges the job from CUPS and removes it from the local history store |
+
+### Job persistence
+
+When a job is submitted, the app writes a record to `jobs.db` (auto-created in the app directory) containing the document name, printer, submitting user, and timestamp. This record survives:
+
+- **Flask restarts** — jobs submitted before a restart still appear in the queue with full metadata.
+- **CUPS restarts / purges** — CUPS removes completed jobs from its own store after a configurable period (`PreserveJobHistory`). Jobs that CUPS has forgotten are shown in the *Completed* and *All Jobs* filters as history-only entries (no live size or state; assumed Completed).
+
+History-only entries can be removed individually with the **Delete** button.
+
+> **Docker note:** `jobs.db` lives inside the container and is lost on container recreation. Mount it as a host volume to keep history across deployments:
+> ```yaml
+> volumes:
+>   - ./jobs.db:/app/jobs.db
+> ```
+
 ## Docker
 
 The image bundles Python, pycups, and LibreOffice so there is nothing extra to install on the host beyond Docker itself.
@@ -259,6 +286,7 @@ cups-print-forwarder/
 ├── config.py           # Settings and defaults
 ├── run.py              # Entry point
 ├── wake_targets.json   # Persisted wake targets (auto-created)
+├── jobs.db             # SQLite job history store (auto-created)
 ├── requirements.txt
 ├── Dockerfile
 ├── docker-compose.yml
