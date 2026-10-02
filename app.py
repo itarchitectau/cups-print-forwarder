@@ -337,7 +337,7 @@ def cancel_job(job_id):
 @auth.login_required
 def release_job(job_id):
     try:
-        cups_conn().releaseJob(job_id)
+        cups_conn().setJobHoldUntil(job_id, "no-hold")
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
     return jsonify({"success": True})
