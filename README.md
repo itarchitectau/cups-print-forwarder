@@ -35,11 +35,13 @@ pip install -r requirements.txt
 
 ## Configuration
 
-All settings live in [`config.py`](config.py) and can be overridden with environment variables.
+All settings can be overridden with environment variables. In production, set at minimum `SECRET_KEY`, `AUTH_PASS`, and `CUPS_HOST`.
 
 | Environment variable | Default | Description |
 |---|---|---|
-| `SECRET_KEY` | random (per process) | Flask session secret — set a stable value in production |
+| `SECRET_KEY` | random (per process) | Flask session secret — **required in production**; generate with `python -c "import secrets; print(secrets.token_hex(32))"` |
+| `AUTH_USER` | `admin` | HTTP Digest username |
+| `AUTH_PASS` | `changeme` | HTTP Digest password — **must be changed**; the app prints a warning on startup if this default is used |
 | `FLASK_HOST` | `0.0.0.0` | Interface to listen on |
 | `FLASK_PORT` | `5000` | Port to listen on |
 | `CUPS_HOST` | `localhost` | CUPS server hostname or IP |
@@ -48,18 +50,16 @@ All settings live in [`config.py`](config.py) and can be overridden with environ
 | `LIBREOFFICE_BIN` | `soffice` | LibreOffice binary name or full path |
 | `RESTART_CUPS_BROWSED_CMD` | `systemctl restart cups-browsed` | Shell command (space-split) used by the Services tab to restart cups-browsed |
 
-### Changing credentials
+### Setting credentials
 
-Edit `DIGEST_USERS` in [`config.py`](config.py):
+Set `AUTH_USER` and `AUTH_PASS` as environment variables (or in your `.env` file):
 
-```python
-DIGEST_USERS = {
-    "alice": "s3cr3t",
-    "bob":   "hunter2",
-}
+```bash
+export AUTH_USER=alice
+export AUTH_PASS=s3cr3t
 ```
 
-Each key is a username; the value is the password sent through HTTP Digest (never transmitted in plaintext).
+Credentials are read from the environment at startup via [`config.py`](config.py). HTTP Digest authentication ensures the password is never transmitted in plaintext.
 
 ### Using an `.env` file
 
@@ -234,18 +234,48 @@ docker run -d \
   cups-print-forwarder
 ```
 
-### Changing credentials in a container
+### Passing credentials to a container
 
-Mount a custom `config.py` over the one baked into the image:
+Pass `AUTH_USER` and `AUTH_PASS` as environment variables:
 
 ```bash
 docker run -d \
   --name cups-print-forwarder \
   --add-host host.docker.internal:host-gateway \
   -p 5000:5000 \
-  -v $(pwd)/config.py:/app/config.py:ro \
+  -e SECRET_KEY=$(python -c "import secrets; print(secrets.token_hex(32))") \
+  -e AUTH_USER=alice \
+  -e AUTH_PASS=s3cr3t \
+  -e CUPS_HOST=host.docker.internal \
   cups-print-forwarder
 ```
+
+Or use an `.env` file with `--env-file .env`.
+
+## Security
+
+### What is protected
+
+| Control | Detail |
+|---|---|
+| **HTTP Digest Auth** | All routes require authentication. Credentials are never transmitted in plaintext. |
+| **File type enforcement** | Extension allow-list (`pdf`, `docx`, `tiff`, `tif`) plus magic-byte validation — the file's actual content must match its extension. |
+| **Upload size limit** | 50 MB maximum enforced by Flask (`MAX_CONTENT_LENGTH`). |
+| **Decompression bomb protection** | Pillow rejects images exceeding 30 megapixels (`Image.MAX_IMAGE_PIXELS`). |
+| **Input validation** | Page range, sides, color mode, and copy count are server-side validated before being passed to CUPS. Printer name is validated against the live CUPS printer list. |
+| **CSRF-like protection** | All state-changing requests (POST, DELETE) must include `X-Requested-With: XMLHttpRequest`. Direct browser form posts are rejected with 403. |
+| **Rate limiting** | `/preview` is capped at 20 requests/minute per IP; `/print` at 30/minute. Returns 429 on excess. |
+| **LibreOffice sandboxing** | Conversion runs with `--norestore --nofirststartwizard` and is limited to 2 concurrent processes. |
+| **Concurrency safety** | Wake-target file writes are serialized with a threading lock. |
+| **Non-root container** | The Docker image runs as `appuser` (UID allocated by `useradd --system`). |
+| **No privilege escalation** | `docker-compose.yml` sets `security_opt: no-new-privileges:true`. |
+
+### Production checklist
+
+- [ ] Set `SECRET_KEY` to a random value (`python -c "import secrets; print(secrets.token_hex(32))"`)
+- [ ] Set `AUTH_PASS` to a strong password — the app logs a warning on startup if the default `changeme` is still in use
+- [ ] Run behind a TLS-terminating reverse proxy (nginx, Traefik, Caddy) — the app itself speaks plain HTTP
+- [ ] Consider mounting `jobs.db` and `wake_targets.json` as host volumes so state survives container recreation
 
 ## Wake Printers
 
