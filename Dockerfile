@@ -15,7 +15,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py config.py run.py ./
 COPY templates/ templates/
 
-RUN mkdir -p uploads
+RUN mkdir -p uploads \
+    && useradd --system --no-create-home --shell /bin/false appuser \
+    && chown -R appuser:appuser /app
+
+USER appuser
 
 ENV FLASK_HOST=0.0.0.0 \
     FLASK_PORT=5000 \

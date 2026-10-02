@@ -382,7 +382,12 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function esc(s) {
-  return String(s ?? '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s ?? '—').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function apiFetch(url, opts) {
+  opts = opts || {};
+  opts.headers = Object.assign({'X-Requested-With':'XMLHttpRequest'}, opts.headers || {});
+  return fetch(url, opts);
 }
 function showMsg(el, text, ok) {
   el.textContent = text; el.className = 'msg ' + (ok ? 'ok' : 'err'); el.hidden = false;
@@ -464,7 +469,7 @@ async function loadPreview(file) {
       } else {
         // DOCX: convert on server, get PDF back
         const fd = new FormData(); fd.append('file', file);
-        const res = await fetch('/preview', { method: 'POST', body: fd });
+        const res = await apiFetch('/preview', { method: 'POST', body: fd });
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
           pvSetState('error'); pvErr.textContent = d.error || 'Preview conversion failed.'; return;
@@ -481,7 +486,7 @@ async function loadPreview(file) {
 
     } else if (ext === 'tiff' || ext === 'tif') {
       const fd = new FormData(); fd.append('file', file);
-      const res = await fetch('/preview', { method: 'POST', body: fd });
+      const res = await apiFetch('/preview', { method: 'POST', body: fd });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         pvSetState('error'); pvErr.textContent = d.error || 'Preview conversion failed.'; return;
@@ -528,7 +533,7 @@ printForm.addEventListener('submit', async e=>{
   if(!fileInput.files.length){showMsg(printMsg,'Please select a file.',false);return;}
   submitBtn.disabled=true; submitBtn.innerHTML='<span class="spin"></span> Sending…'; printMsg.hidden=true;
   try{
-    const res=await fetch('/print',{method:'POST',body:new FormData(printForm)});
+    const res=await apiFetch('/print',{method:'POST',body:new FormData(printForm)});
     const d=await res.json();
     if(res.ok&&d.success){
       showMsg(printMsg,`Job #${d.job_id} queued on "${d.printer}".`,true);
@@ -595,7 +600,7 @@ async function doJobAct(jobId,action){
   el.innerHTML='<span class="spin" style="color:var(--muted)"></span>';
   const url=action==='delete'?`/jobs/${jobId}/delete`:`/jobs/${jobId}/${action}`;
   try{
-    const res=await fetch(url,{method:'POST'});
+    const res=await apiFetch(url,{method:'POST'});
     const d=await res.json();
     if(res.ok&&d.success){
       const row=document.getElementById('jr-'+jobId);
@@ -686,7 +691,7 @@ function onlineHtml(ports){
 async function probeTarget(id){
   setActBusy(id,true);
   try{
-    const res=await fetch(`/wake/targets/${id}/probe`,{method:'POST'});
+    const res=await apiFetch(`/wake/targets/${id}/probe`,{method:'POST'});
     const d=await res.json();
     if(d.error) setCardStatus(id,'unknown','&#9679; Unknown','Error: '+esc(d.error));
     else if(d.online) setCardStatus(id,'online','&#9679; Online',onlineHtml(d.ports)||'Online');
@@ -698,7 +703,7 @@ async function probeTarget(id){
 async function wakeTarget(id){
   setActBusy(id,true);
   try{
-    const res=await fetch(`/wake/targets/${id}/wake`,{method:'POST'});
+    const res=await apiFetch(`/wake/targets/${id}/wake`,{method:'POST'});
     const d=await res.json();
     const lines=[];
     if(d.wol_sent)  lines.push('&#9889; WOL magic packet sent.');
@@ -720,7 +725,7 @@ async function removeTarget(id){
   const card=document.getElementById('pc-'+id);
   if(card){card.style.opacity='.35';card.style.transition='opacity .3s';}
   try{
-    await fetch(`/wake/targets/${id}`,{method:'DELETE'});
+    await apiFetch(`/wake/targets/${id}`,{method:'DELETE'});
     wakeTargets=wakeTargets.filter(t=>t.id!==id);
     renderWakeTargets();
   }catch(_){if(card)card.style.opacity='1';}
@@ -744,7 +749,7 @@ document.getElementById('wpAddBtn').addEventListener('click',async()=>{
   const btn=document.getElementById('wpAddBtn');
   btn.disabled=true; btn.innerHTML='<span class="spin"></span>';
   try{
-    const res=await fetch('/wake/targets',{
+    const res=await apiFetch('/wake/targets',{
       method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({name,host,mac}),
     });
@@ -767,7 +772,7 @@ document.getElementById('wakeAllBtn').addEventListener('click',async()=>{
   btn.disabled=true; btn.innerHTML='<span class="spin"></span> Waking&hellip;';
   allMsg.hidden=true;
   try{
-    const res=await fetch('/wake/all',{method:'POST'});
+    const res=await apiFetch('/wake/all',{method:'POST'});
     const d=await res.json();
     if(d.error){showMsg(allMsg,d.error,false);}
     else{
@@ -812,7 +817,7 @@ function renderSvc(){
 async function doRestartSvc(){
   svcState='busy'; renderSvc(); svcMsg.hidden=true;
   try{
-    const res=await fetch('/service/cups-browsed/restart',{method:'POST'});
+    const res=await apiFetch('/service/cups-browsed/restart',{method:'POST'});
     const d=await res.json();
     showMsg(svcMsg,res.ok&&d.success?'&#10003; cups-browsed restarted successfully.':(d.error||'Restart failed.'),res.ok&&d.success);
   }catch(err){showMsg(svcMsg,'Network error: '+err.message,false);}

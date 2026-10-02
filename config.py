@@ -1,9 +1,19 @@
 import os
+import warnings
 
-# HTTP Digest Auth credentials (username -> password)
-DIGEST_USERS = {
-    "admin": "changeme",
-}
+# HTTP Digest Auth credentials.
+# Set AUTH_USER and AUTH_PASS environment variables before starting the app.
+_auth_user = os.environ.get("AUTH_USER", "admin")
+_auth_pass = os.environ.get("AUTH_PASS", "changeme")
+
+if _auth_pass == "changeme":
+    warnings.warn(
+        "WARNING: Using default password 'changeme'. "
+        "Set the AUTH_PASS environment variable to a strong password.",
+        stacklevel=2,
+    )
+
+DIGEST_USERS = {_auth_user: _auth_pass}
 
 # CUPS settings
 CUPS_HOST = os.environ.get("CUPS_HOST", "localhost")
